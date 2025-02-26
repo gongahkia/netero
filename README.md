@@ -15,8 +15,10 @@ Truffle and Ganache for the backend blockchain contract logic
 Python for the other backend
 
 ```mermaid
-$ npm install web3
-$ 
+$ cd src
+$ python3 main.py
+$ cd netero-app/
+$ npm run serve
 ```
 
 ## References
