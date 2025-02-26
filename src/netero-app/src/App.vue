@@ -2,6 +2,7 @@
   <div id="app">
     <h1 class="app-title">Netero</h1>
     <h2 class="app-subtitle">A blockchain-powered voting system</h2>
+    <h4 class="app-description">Made with ❤️ by <a href="https://github.com/gongahkia">Gabriel Ong</a></h4>
     <img src="@/assets/netero.gif" alt="Netero GIF" class="app-gif" />
     <nav class="app-nav">
       <router-link to="/register" class="nav-link">Register</router-link>
@@ -54,6 +55,13 @@ body {
 .app-subtitle {
   font-size: 1.2rem;
   color: var(--secondary-color);
+  margin-bottom: 0.5rem; /* Adjusted for spacing */
+  text-align: center;
+}
+
+.app-description {
+  font-size: 0.8rem;
+  color: gray;
   margin-bottom: 1rem; /* Adjusted for spacing */
   text-align: center;
 }
