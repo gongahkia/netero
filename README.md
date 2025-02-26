@@ -1,4 +1,4 @@
-[![](https://img.shields.io/badge/netero_1.0-passing-green)](https://github.com/gongahkia/netero/releases/tag/1.0) 
+[![](https://img.shields.io/badge/netero_1.0.0-passing-green)](https://github.com/gongahkia/netero/releases/tag/1.0.0) 
 
 # `Netero`
 
