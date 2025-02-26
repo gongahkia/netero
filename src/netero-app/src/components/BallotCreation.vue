@@ -15,7 +15,7 @@
 <script>
 
 import Web3 from 'web3'
-import VoteContract from '../../build/contracts/Vote.json'
+import VoteContract from '../../../core/build/contracts/Vote.json'
 
 export default {
   name: 'BallotCreation',
