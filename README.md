@@ -4,22 +4,45 @@
 
 Decentralized voting platform powered by blockchain.
 
-> TODO edit the below
-
 * Vue for the frontend
 * Truffle and Ganache for the backend blockchain contract logic
 * Python for the other backend
+
+![](./asset/screenshot/home.png)
 
 ## Usage
 
 Instructions below are for local hosting.
 
+1. Install the [MetaMask](https://metamask.io/) Browser Extension.
+    1. [Chrome Extension](https://chromewebstore.google.com/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn?hl=en&pli=1)
+    2. [Firefox  Extension](https://addons.mozilla.org/en-US/firefox/addon/ether-metamask/)
+    3. [Microsoft Edge Extension](https://microsoftedge.microsoft.com/addons/detail/metamask/ejbalbakoplchlghecdalmeeeajnimhm?hl=en-US)
+    4. [Brave Extension](https://support.metamask.io/configure/wallet/using-metamask-wallet-in-brave-browser/)
+2. Create a new wallet or import an existing one.
+3. Connect to the local network with the following details.
+    1. **Network Name**: Any string
+    2. **New RPC URL**: *http://localhost:8545* 
+    3. **Chain ID**: *1337* 
+    4. **Currency Symbol**: *ETH*
+4. Run the following.
+
 ```console
-$ cd src
+$ git clone https://github.com/gongahkia/netero
+$ cd netero/src
 $ python3 main.py
 $ cd netero-app/
 $ npm run serve
 ```
+
+5. View `netero-app` at [localhost:8080](http://localhost:8080/).
+
+## Screenshots
+
+![](./asset/screenshot/register.png)
+![](./asset/screenshot/create.png)
+![](./asset/screenshot/cast.png)
+![](./asset/screenshot/result.png)
 
 ## Architecture
 
@@ -80,10 +103,8 @@ sequenceDiagram
     App->>User: Display confirmation/results
 ```
 
-View `netero-app` at [localhost:8080](http://localhost:8080/).
-
 ## References
 
 The name `Netero` is in reference to [Isaac Netero](https://hunterxhunter.fandom.com/wiki/Isaac_Netero) (アイザック＝ネテロ), the 12th Chairman of the [Hunter Association](https://hunterxhunter.fandom.com/wiki/Hunter_Association). His death in the [Chimera Ant arc](https://hunterxhunter.fandom.com/wiki/Chimera_Ant_arc) at the hands of Chimera Ant King [Meruem](https://hunterxhunter.fandom.com/wiki/Meruem) directly trigger the events of the [13th Hunter Chairman Election arc](https://hunterxhunter.fandom.com/wiki/13th_Hunter_Chairman_Election_arc), as part of the the ongoing manga series, [HunterXhunter](https://hunterxhunter.fandom.com/wiki/Hunterpedia).
 
-![](https://static.wikia.nocookie.net/hunterxhunter/images/0/04/Netero_in_Dark_Continent.png/revision/latest?cb=20210828043114)
+![](./asset/logo/netero.png)
