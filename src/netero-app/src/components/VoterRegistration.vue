@@ -1,6 +1,5 @@
 <template>
   <div class="voter-registration">
-    <h1>Netero</h1>
     <h2>Give Right to Vote</h2>
     <form @submit.prevent="giveRightToVote">
       <input v-model="voterAddress" placeholder="Enter Ethereum address" required>
