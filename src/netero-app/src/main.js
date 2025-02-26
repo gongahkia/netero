@@ -2,10 +2,10 @@ import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 
-import Register from './components/Register.vue'
-import CreateBallot from './components/CreateBallot.vue'
-import Vote from './components/Vote.vue'
-import Results from './components/Results.vue'
+import Register from './components/VotingRegistration.vue'
+import CreateBallot from './components/BallotCreation.vue'
+import Vote from './components/VotingInterface.vue'
+import Results from './components/ResultsDisplay.vue'
 
 const routes = [
   { path: '/register', component: Register },
