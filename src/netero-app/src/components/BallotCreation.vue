@@ -1,6 +1,5 @@
 <template>
   <div class="ballot-creation">
-    <h1>Netero</h1>
     <h2>Create New Voting Contract</h2>
     <form @submit.prevent="createVotingContract">
       <div v-for="(option, index) in options" :key="index">
