@@ -66,7 +66,8 @@ export default {
           this.proposals.push(proposal)
         }
 
-        const winningProposalIndex = await this.contract.methods.winningProposal().call()
+        // const winningProposalIndex = await this.contract.methods.winningProposal().call()
+
         const winnerName = await this.contract.methods.winnerName().call()
         this.winningProposalName = this.web3.utils.hexToUtf8(winnerName)
       } catch (error) {
