@@ -4,11 +4,15 @@
 
 Decentralized voting platform powered by blockchain.
 
-## Rationale
+> TODO edit the below
 
-> TODO add here
+* Vue for the frontend
+* Truffle and Ganache for the backend blockchain contract logic
+* Python for the other backend
 
 ## Usage
+
+Instructions below are for local hosting.
 
 ```console
 $ cd src
@@ -19,11 +23,61 @@ $ npm run serve
 
 ## Architecture
 
-* Vue for the frontend
-* Truffle and Ganache for the backend blockchain contract logic
-* Python for the other backend
+### Structure
 
 ```mermaid
+graph TD
+    A[App.vue] --> B[Router]
+    B --> C[VoterRegistration.vue]
+    B --> D[BallotCreation.vue]
+    B --> E[VotingInterface.vue]
+    B --> F[ResultsDisplay.vue]
+    
+    C --> G[Web3]
+    D --> G
+    E --> G
+    F --> G
+    
+    G --> H[Smart Contract]
+    H --> I[Blockchain]
+    
+    J[main.js] --> A
+    J --> K[Vue initialization]
+    J --> L[Router configuration]
+    
+    M[Vote.sol] --> H
+```
+
+### Overview
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant App
+    participant Web3
+    participant SmartContract
+    participant Blockchain
+
+    User->>App: Open application
+    App->>Web3: Initialize Web3
+    Web3->>Blockchain: Connect to network
+    User->>App: Select action (Register/Create/Vote/Results)
+    
+    alt Register
+        App->>SmartContract: Call giveRightToVote()
+        SmartContract->>Blockchain: Update voter status
+    else Create Ballot
+        App->>SmartContract: Deploy new contract
+        SmartContract->>Blockchain: Store new contract
+    else Vote
+        App->>SmartContract: Call vote()
+        SmartContract->>Blockchain: Record vote
+    else View Results
+        App->>SmartContract: Call winningProposal() and winnerName()
+        SmartContract->>App: Return results
+    end
+    
+    App->>User: Display confirmation/results
 ```
 
 View `netero-app` at [localhost:8080](http://localhost:8080/).

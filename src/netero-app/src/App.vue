@@ -38,12 +38,14 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+  align-content: center;
 }
 
 .app-title {
   font-size: 3rem;
   color: var(--primary-color);
   margin-bottom: 0.5rem;
+  align-content: center;
 }
 
 .app-subtitle {
