@@ -12,7 +12,6 @@
 </template>
 
 <script>
-
 import Web3 from 'web3'
 import VoteContract from '../../../core/build/contracts/Vote.json'
 
@@ -26,22 +25,23 @@ export default {
     }
   },
   async mounted() {
-    // Initialize Web3
-    if (window.ethereum) {
-      this.web3 = new Web3(window.ethereum)
-      try {
-        // Request account access
-        await window.ethereum.enable()
-      } catch (error) {
-        console.error("User denied account access")
-      }
-    } else if (window.web3) {
-      this.web3 = new Web3(window.web3.currentProvider)
-    } else {
-      console.log('Non-Ethereum browser detected. Consider using MetaMask!')
-    }
+    await this.initWeb3()
   },
   methods: {
+    async initWeb3() {
+      if (window.ethereum) {
+        this.web3 = new Web3(window.ethereum)
+        try {
+          await window.ethereum.request({ method: 'eth_requestAccounts' })
+        } catch (error) {
+          console.error("User denied account access")
+        }
+      } else if (window.web3) {
+        this.web3 = new Web3(window.web3.currentProvider)
+      } else {
+        console.log('Non-Ethereum browser detected. Consider using MetaMask!')
+      }
+    },
     addOption() {
       this.options.push('')
     },
@@ -49,19 +49,13 @@ export default {
       try {
         const accounts = await this.web3.eth.getAccounts()
         const networkId = await this.web3.eth.net.getId()
-        const deployedNetwork = VoteContract.networks[networkId]
-
-        this.contract = new this.web3.eth.Contract(
-          VoteContract.abi,
-          deployedNetwork && deployedNetwork.address,
-        )
 
         const proposalNames = this.options.map(option => this.web3.utils.asciiToHex(option))
-        
-        // Use the first three accounts as initial authorities (adjust as needed)
         const initialAuthorities = accounts.slice(0, 3)
 
-        await this.contract.deploy({
+        const deployContract = new this.web3.eth.Contract(VoteContract.abi)
+
+        const deployedContract = await deployContract.deploy({
           data: VoteContract.bytecode,
           arguments: [proposalNames, initialAuthorities]
         }).send({
@@ -69,10 +63,11 @@ export default {
           gas: 3000000
         })
 
+        console.log('Contract deployed at:', deployedContract.options.address)
         alert('Voting contract created successfully!')
       } catch (error) {
         console.error('Error creating voting contract:', error)
-        alert('Failed to create voting contract')
+        alert('Failed to create voting contract: ' + error.message)
       }
     }
   }
