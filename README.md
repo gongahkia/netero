@@ -11,7 +11,8 @@ Decentralized voting platform powered by blockchain.
 ## Architecture
 
 ```mermaid
-
+$ npm install -g truffle
+$ 
 ```
 
 ## References
