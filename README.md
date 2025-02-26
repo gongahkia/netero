@@ -2,13 +2,13 @@
 
 # `Netero`
 
-Decentralized voting platform powered by blockchain.
+Decentralized voting platform powered by the blockchain.
 
-* Vue for the frontend
-* Truffle and Ganache for the backend blockchain contract logic
-* Python for the other backend
+For the [stack used](#tech-used).
 
-![](./asset/screenshot/home.png)
+<div align="center">
+    <img src="./asset/screenshot/home.png" width="75%">
+</div>
 
 ## Usage
 
@@ -43,6 +43,14 @@ $ npm run serve
 ![](./asset/screenshot/create.png)
 ![](./asset/screenshot/cast.png)
 ![](./asset/screenshot/result.png)
+
+## Tech used
+
+`Netero` was built with the following stack.
+
+* [Vue.js](https://vuejs.org/) for the frontend
+* [Truffle](https://archive.trufflesuite.com/), [Ganache](https://archive.trufflesuite.com/ganache/) and [Solidity](https://soliditylang.org/) for the smart contract and local Ethereum deployment middleware
+* Raw [Python](https://www.python.org/) for the backend 
 
 ## Architecture
 
