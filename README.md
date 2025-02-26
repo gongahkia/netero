@@ -7,7 +7,7 @@ Decentralized voting platform powered by the blockchain.
 For the [stack used](#tech-used).
 
 <div align="center">
-    <img src="./asset/screenshot/home.png" width="75%">
+    <img src="./asset/screenshot/home.png" width="80%">
 </div>
 
 ## Usage
