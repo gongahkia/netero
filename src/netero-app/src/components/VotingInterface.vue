@@ -1,6 +1,5 @@
 <template>
   <div class="voting-interface">
-    <h1>Netero</h1>
     <h2>Cast Your Vote</h2>
     <form @submit.prevent="castVote">
       <div v-for="(proposal, index) in proposals" :key="index">
@@ -10,7 +9,7 @@
           :value="index" 
           v-model="selectedProposal"
         >
-        <label :for="'proposal-' + index">{{ web3.utils.hexToUtf8(proposal.name) }}</label>
+        <label :for="'proposal-' + index">{{ web3 ? web3.utils.hexToUtf8(proposal.name) : '' }}</label>
       </div>
       <button type="submit" :disabled="selectedProposal === null">Cast Vote</button>
     </form>
@@ -32,32 +31,50 @@ export default {
     }
   },
   async mounted() {
-    await this.initWeb3()
-    await this.loadProposals()
+    try {
+      await this.initWeb3()
+      await this.loadProposals()
+    } catch (error) {
+      console.error('Error in mounted hook:', error)
+    }
   },
   methods: {
     async initWeb3() {
-      if (window.ethereum) {
-        this.web3 = new Web3(window.ethereum)
-        try {
-          await window.ethereum.enable()
-        } catch (error) {
-          console.error("User denied account access")
+      try {
+        if (window.ethereum) {
+          this.web3 = new Web3(window.ethereum)
+          try {
+            await window.ethereum.request({ method: 'eth_requestAccounts' })
+          } catch (error) {
+            console.error("User denied account access")
+            return
+          }
+        } else if (window.web3) {
+          this.web3 = new Web3(window.web3.currentProvider)
+        } else {
+          console.log('Non-Ethereum browser detected. Consider using MetaMask!')
+          return
         }
-      } else if (window.web3) {
-        this.web3 = new Web3(window.web3.currentProvider)
-      } else {
-        console.log('Non-Ethereum browser detected. Consider using MetaMask!')
-      }
 
-      const networkId = await this.web3.eth.net.getId()
-      const deployedNetwork = VoteContract.networks[networkId]
-      this.contract = new this.web3.eth.Contract(
-        VoteContract.abi,
-        deployedNetwork && deployedNetwork.address,
-      )
+        const networkId = await this.web3.eth.net.getId()
+        const deployedNetwork = VoteContract.networks[networkId]
+        if (!deployedNetwork) {
+          throw new Error('Contract not deployed on the current network')
+        }
+        this.contract = new this.web3.eth.Contract(
+          VoteContract.abi,
+          deployedNetwork.address
+        )
+      } catch (error) {
+        console.error('Failed to initialize Web3:', error)
+        alert('Failed to initialize Web3. Please make sure you are connected to the correct network and have MetaMask installed.')
+      }
     },
     async loadProposals() {
+      if (!this.web3 || !this.contract) {
+        console.error('Web3 or contract not initialized')
+        return
+      }
       try {
         const proposalCount = await this.contract.methods.proposals.length().call()
         this.proposals = []
@@ -71,11 +88,15 @@ export default {
       }
     },
     async castVote() {
+      if (!this.web3 || !this.contract) {
+        alert('Web3 is not initialized. Please make sure you are connected to the correct network and have MetaMask installed.')
+        return
+      }
       try {
         const accounts = await this.web3.eth.getAccounts()
         await this.contract.methods.vote(this.selectedProposal).send({ from: accounts[0] })
         alert('Vote cast successfully!')
-        this.selectedProposal = null // Reset selection after voting
+        this.selectedProposal = null 
       } catch (error) {
         console.error('Error casting vote:', error)
         alert('Failed to cast vote. Make sure you have the right to vote and haven\'t voted before.')
