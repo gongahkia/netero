@@ -48,6 +48,8 @@ export default {
     async createVotingContract() {
       try {
         const accounts = await this.web3.eth.getAccounts()
+
+        // eslint-disable-next-line no-unused-vars
         const networkId = await this.web3.eth.net.getId()
 
         const proposalNames = this.options.map(option => this.web3.utils.asciiToHex(option))

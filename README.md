@@ -6,20 +6,27 @@ Decentralized voting platform powered by blockchain.
 
 ## Rationale
 
+> TODO add here
+
 ## Usage
 
-## Architecture
-
-Vue for the frontend
-Truffle and Ganache for the backend blockchain contract logic
-Python for the other backend
-
-```mermaid
+```console
 $ cd src
 $ python3 main.py
 $ cd netero-app/
 $ npm run serve
 ```
+
+## Architecture
+
+* Vue for the frontend
+* Truffle and Ganache for the backend blockchain contract logic
+* Python for the other backend
+
+```mermaid
+```
+
+View `netero-app` at [localhost:8080](http://localhost:8080/).
 
 ## References
 
