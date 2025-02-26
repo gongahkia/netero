@@ -2,6 +2,7 @@
   <div id="app">
     <h1 class="app-title">Netero</h1>
     <h2 class="app-subtitle">A blockchain-powered voting system</h2>
+    <img src="@/assets/netero.gif" alt="Netero GIF" class="app-gif" />
     <nav class="app-nav">
       <router-link to="/register" class="nav-link">Register</router-link>
       <router-link to="/create-ballot" class="nav-link">Create Ballot</router-link>
@@ -38,20 +39,30 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-  align-content: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .app-title {
   font-size: 3rem;
   color: var(--primary-color);
   margin-bottom: 0.5rem;
-  align-content: center;
+  text-align: center;
 }
 
 .app-subtitle {
   font-size: 1.2rem;
   color: var(--secondary-color);
-  margin-bottom: 2rem;
+  margin-bottom: 1rem; /* Adjusted for spacing */
+  text-align: center;
+}
+
+.app-gif {
+  width: auto; /* Adjust width as needed */
+  height: auto; /* Adjust height as needed */
+  max-width: 100%; /* Responsive */
+  margin-bottom: 2rem; /* Space below the GIF */
 }
 
 .app-nav {
@@ -78,6 +89,7 @@ body {
 @media (max-width: 768px) {
   .app-nav {
     flex-direction: column;
+    align-items: center;
   }
 
   .nav-link {
