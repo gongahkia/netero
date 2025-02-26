@@ -1,42 +1,79 @@
 <template>
   <div class="ballot-creation">
-    <h2>Create New Ballot</h2>
-    <form @submit.prevent="createBallot">
-      <input v-model="ballotName" placeholder="Ballot Name" required>
+    <h1>Netero</h1>
+    <h2>Create New Voting Contract</h2>
+    <form @submit.prevent="createVotingContract">
       <div v-for="(option, index) in options" :key="index">
-        <input v-model="options[index]" :placeholder="`Option ${index + 1}`" required>
+        <input v-model="options[index]" :placeholder="`Proposal ${index + 1}`" required>
       </div>
-      <button type="button" @click="addOption">Add Option</button>
-      <button type="submit">Create Ballot</button>
+      <button type="button" @click="addOption">Add Proposal</button>
+      <button type="submit">Create Voting Contract</button>
     </form>
   </div>
 </template>
 
 <script>
+
+import Web3 from 'web3'
+import VoteContract from '../../build/contracts/Vote.json'
+
 export default {
   name: 'BallotCreation',
   data() {
     return {
-      ballotName: '',
       options: ['', ''],
       web3: null,
       contract: null
     }
   },
-  mounted() {
-    // Initialize Web3 and contract
+  async mounted() {
+    // Initialize Web3
+    if (window.ethereum) {
+      this.web3 = new Web3(window.ethereum)
+      try {
+        // Request account access
+        await window.ethereum.enable()
+      } catch (error) {
+        console.error("User denied account access")
+      }
+    } else if (window.web3) {
+      this.web3 = new Web3(window.web3.currentProvider)
+    } else {
+      console.log('Non-Ethereum browser detected. Consider using MetaMask!')
+    }
   },
   methods: {
     addOption() {
       this.options.push('')
     },
-    async createBallot() {
+    async createVotingContract() {
       try {
-        await this.contract.methods.createBallot(this.ballotName, this.options).send({ from: this.web3.eth.defaultAccount })
-        alert('Ballot created successfully!')
+        const accounts = await this.web3.eth.getAccounts()
+        const networkId = await this.web3.eth.net.getId()
+        const deployedNetwork = VoteContract.networks[networkId]
+
+        this.contract = new this.web3.eth.Contract(
+          VoteContract.abi,
+          deployedNetwork && deployedNetwork.address,
+        )
+
+        const proposalNames = this.options.map(option => this.web3.utils.asciiToHex(option))
+        
+        // Use the first three accounts as initial authorities (adjust as needed)
+        const initialAuthorities = accounts.slice(0, 3)
+
+        await this.contract.deploy({
+          data: VoteContract.bytecode,
+          arguments: [proposalNames, initialAuthorities]
+        }).send({
+          from: accounts[0],
+          gas: 3000000
+        })
+
+        alert('Voting contract created successfully!')
       } catch (error) {
-        console.error('Error creating ballot:', error)
-        alert('Failed to create ballot')
+        console.error('Error creating voting contract:', error)
+        alert('Failed to create voting contract')
       }
     }
   }
