@@ -16,7 +16,15 @@ contract Vote {
     mapping(address => Voter) public voters;
     Proposal[] public proposals;
 
-    constructor(bytes32[] memory proposalNames) {
+    address[] public authorities;
+    mapping(address => bool) public isAuthority;
+
+    modifier onlyAuthority() {
+        require(isAuthority[msg.sender], "Not an authority");
+        _;
+    }
+
+    constructor(bytes32[] memory proposalNames, address[] memory initialAuthorities) {
         chairperson = msg.sender;
         voters[chairperson].hasVoted = false;
 
@@ -26,10 +34,14 @@ contract Vote {
                 voteCount: 0
             }));
         }
+
+        for (uint256 i = 0; i < initialAuthorities.length; i++) {
+            authorities.push(initialAuthorities[i]);
+            isAuthority[initialAuthorities[i]] = true;
+        }
     }
 
-    function giveRightToVote(address voter) public {
-        require(msg.sender == chairperson, "Only chairperson can give right to vote.");
+    function giveRightToVote(address voter) public onlyAuthority {
         require(!voters[voter].hasVoted, "The voter already voted.");
         voters[voter].hasVoted = false;
     }
@@ -56,5 +68,11 @@ contract Vote {
 
     function winnerName() public view returns (bytes32 winnerName_) {
         winnerName_ = proposals[winningProposal()].name;
+    }
+
+    function addAuthority(address newAuthority) public onlyAuthority {
+        require(!isAuthority[newAuthority], "Already an authority");
+        authorities.push(newAuthority);
+        isAuthority[newAuthority] = true;
     }
 }

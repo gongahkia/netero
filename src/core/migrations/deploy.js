@@ -1,6 +1,7 @@
-const Voting = artifacts.require("Vote");
+const Vote = artifacts.require("Vote");
 
-module.exports = function(deployer) {
+module.exports = function(deployer, network, accounts) {
   const proposalNames = ["Proposal 1", "Proposal 2", "Proposal 3"].map(name => web3.utils.asciiToHex(name));
-  deployer.deploy(Voting, proposalNames);
+  const initialAuthorities = accounts.slice(0, 3);
+  deployer.deploy(Vote, proposalNames, initialAuthorities);
 };

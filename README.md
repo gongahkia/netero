@@ -10,8 +10,12 @@ Decentralized voting platform powered by blockchain.
 
 ## Architecture
 
+Vue for the frontend
+Truffle and Ganache for the backend blockchain contract logic
+Python for the other backend
+
 ```mermaid
-$ npm install -g truffle
+$ npm install web3
 $ 
 ```
 
