@@ -6,7 +6,7 @@ dataSources:
     name: PollFactory
     network: localhost
     source:
-  address: "0x9A453fCb69C9f945D3E9cdC95053940100168698" # local PollFactory (development)
+      address: "0x9A453fCb69C9f945D3E9cdC95053940100168698" # local PollFactory (development)
       abi: PollFactory
       startBlock: 1
     mapping:
