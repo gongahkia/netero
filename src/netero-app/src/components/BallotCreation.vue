@@ -171,8 +171,8 @@ export default {
 
 .terminal-input:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.08);
 }
 
 .terminal-input::placeholder {
@@ -202,9 +202,10 @@ export default {
 
 .btn-primary:hover,
 .btn-secondary:hover {
-  background-color: rgba(0, 255, 0, 0.1);
-  box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
-  text-shadow: 0 0 5px var(--accent);
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.25);
 }
 
 .btn-primary {

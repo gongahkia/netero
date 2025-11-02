@@ -4,6 +4,8 @@
       <h1>// MEMBER_DASHBOARD</h1>
       <p class="subtitle">Cast your vote on active proposals</p>
 
+      <WalletConnection />
+
       <div class="instructions-card card stack">
         <span class="section-title">// SETUP_INSTRUCTIONS</span>
         <div class="instruction-steps">
@@ -82,10 +84,11 @@
 <script>
 import VotingInterface from './VotingInterface.vue'
 import ResultsDisplay from './ResultsDisplay.vue'
+import WalletConnection from './WalletConnection.vue'
 
 export default {
   name: 'MemberDashboard',
-  components: { VotingInterface, ResultsDisplay },
+  components: { VotingInterface, ResultsDisplay, WalletConnection },
   data(){
     return { contractAddress: localStorage.getItem('netero.contract') || '', stored: !!localStorage.getItem('netero.contract') }
   },

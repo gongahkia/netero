@@ -4,6 +4,8 @@
       <h1>// ORGANIZER_DASHBOARD</h1>
       <p class="subtitle">Create ballots, register voters, and manage elections</p>
 
+      <WalletConnection />
+
       <div class="instructions-card card stack">
         <span class="section-title">// WORKFLOW</span>
         <div class="instruction-steps">
@@ -95,10 +97,11 @@
 import BallotCreation from './BallotCreation.vue'
 import VoterRegistration from './VoterRegistration.vue'
 import ResultsDisplay from './ResultsDisplay.vue'
+import WalletConnection from './WalletConnection.vue'
 
 export default {
   name: 'OrgDashboard',
-  components: { BallotCreation, VoterRegistration, ResultsDisplay }
+  components: { BallotCreation, VoterRegistration, ResultsDisplay, WalletConnection }
 }
 </script>
 
