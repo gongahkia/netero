@@ -1,0 +1,26 @@
+type Org @entity {
+  id: ID!
+  polls: [Poll!]! @derivedFrom(field: "org")
+}
+
+type Poll @entity {
+  id: ID!
+  org: Org!
+  title: String!
+  description: String!
+  options: [String!]!
+  tallies: [BigInt!]!
+  state: Int!
+  admin: Bytes!
+  createdAt: BigInt!
+  votes: [Vote!]! @derivedFrom(field: "poll")
+}
+
+type Vote @entity {
+  id: ID!
+  poll: Poll!
+  voter: Bytes!
+  optionIndex: Int!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}

@@ -1,5 +1,6 @@
 <template>
   <div id="app">
+<<<<<<< HEAD
     <RoleSelectionModal
       :show="!userRole"
       @role-selected="handleRoleSelection"
@@ -27,6 +28,20 @@
         <span class="foot-note">Local-only demo • Chain: 1337 • RPC: http://localhost:8545</span>
       </div>
     </footer>
+=======
+    <h1 class="app-title">Netero</h1>
+    <h2 class="app-subtitle">A blockchain-powered voting system</h2>
+    <h4 class="app-description">Made with ❤️ by <a href="https://github.com/gongahkia">Gabriel Ong</a></h4>
+    <img src="@/assets/netero.gif" alt="Netero GIF" class="app-gif" />
+    <nav class="app-nav">
+      <router-link to="/register" class="nav-link">Register</router-link>
+      <router-link to="/create-ballot" class="nav-link">Create Ballot</router-link>
+      <router-link to="/vote" class="nav-link">Vote</router-link>
+      <router-link to="/results" class="nav-link">Results</router-link>
+      <router-link to="/analytics" class="nav-link">Analytics</router-link>
+    </nav>
+    <router-view></router-view>
+>>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
   </div>
 </template>
 

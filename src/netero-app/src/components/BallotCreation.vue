@@ -1,5 +1,6 @@
 <template>
   <div class="ballot-creation">
+<<<<<<< HEAD
     <div class="section-header">
       <h2>// CREATE_VOTING_CONTRACT</h2>
       <div class="status-indicator">[ READY ]</div>
@@ -32,68 +33,128 @@
         <div class="result-label">&gt; CONTRACT_DEPLOYED:</div>
         <div class="contract-address">{{ contractAddress }}</div>
       </div>
+=======
+    <h2>Create Poll</h2>
+    <form @submit.prevent="createPoll">
+      <div class="row">
+        <input v-model="title" placeholder="Title" required />
+      </div>
+      <div class="row">
+        <textarea v-model="description" placeholder="Description" rows="3" />
+      </div>
+      <div class="row">
+        <label><input type="checkbox" v-model="restricted" /> Restricted (allowlist required)</label>
+      </div>
+      <div class="options">
+        <h3>Options</h3>
+        <div v-for="(option, index) in options" :key="index" class="option">
+          <input v-model="options[index]" :placeholder="`Option ${index + 1}`" required />
+          <button type="button" @click="removeOption(index)" v-if="options.length > 2">Remove</button>
+        </div>
+        <button type="button" @click="addOption">Add Option</button>
+      </div>
+      <button type="submit">Create & Activate</button>
+>>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
     </form>
+
+    <div v-if="createdPoll" class="created">
+      <p>Created poll at: <code>{{ createdPoll }}</code></p>
+    </div>
   </div>
+  
 </template>
 
 <script>
-import Web3 from 'web3'
-import VoteContract from '../../../core/build/contracts/Vote.json'
+import { initWeb3, getAccounts, getDeployedAddress, getContract } from '../eth'
+import PollFactoryArtifact from '../../../core/build/contracts/PollFactory.json'
+import PollArtifact from '../../../core/build/contracts/Poll.json'
 
 export default {
   name: 'BallotCreation',
   data() {
     return {
+      title: '',
+      description: '',
       options: ['', ''],
+<<<<<<< HEAD
       web3: null,
       contract: null,
       contractAddress: null
+=======
+      restricted: false,
+      factory: null,
+      createdPoll: ''
+>>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
     }
   },
   async mounted() {
-    await this.initWeb3()
+    await this.init()
   },
   methods: {
-    async initWeb3() {
-      if (window.ethereum) {
-        this.web3 = new Web3(window.ethereum)
-        try {
-          await window.ethereum.request({ method: 'eth_requestAccounts' })
-        } catch (error) {
-          console.error("User denied account access")
-        }
-      } else if (window.web3) {
-        this.web3 = new Web3(window.web3.currentProvider)
-      } else {
-        console.log('Non-Ethereum browser detected. Consider using MetaMask!')
-      }
+    async init() {
+      await initWeb3()
+      const address = await getDeployedAddress(PollFactoryArtifact)
+      this.factory = await getContract(PollFactoryArtifact, address)
     },
     addOption() {
       this.options.push('')
     },
-    async createVotingContract() {
+    removeOption(index) {
+      this.options.splice(index, 1)
+    },
+    async createPoll() {
       try {
-        const accounts = await this.web3.eth.getAccounts()
+        if (!this.factory) await this.init()
+        const accounts = await getAccounts()
+        const org = accounts[0] // MVP: org = admin/creator address
+        const startTime = 0
+        const endTime = 0
+        const tx = await this.factory.methods.createPoll(
+          org,
+          this.title,
+          this.description,
+          this.options,
+          startTime,
+          endTime,
+          this.restricted
+        ).send({ from: accounts[0] })
 
+<<<<<<< HEAD
         const proposalNames = this.options.map(option => this.web3.utils.asciiToHex(option))
         const initialAuthorities = accounts.slice(0, 3)
+=======
+        // Get created poll address from event
+        const ev = tx.events?.PollCreated || (tx.logs || []).find(l => l.event === 'PollCreated')
+        const pollAddress = ev ? (ev.returnValues?.poll || ev.args?.poll) : null
+        this.createdPoll = pollAddress || ''
 
-        const deployContract = new this.web3.eth.Contract(VoteContract.abi)
+        // Auto-activate
+        if (pollAddress) {
+          const poll = await getContract(PollArtifact, pollAddress)
+          await poll.methods.activate().send({ from: accounts[0] })
+        }
+>>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
 
-        const deployedContract = await deployContract.deploy({
-          data: VoteContract.bytecode,
-          arguments: [proposalNames, initialAuthorities]
-        }).send({
-          from: accounts[0],
-          gas: 3000000
+        this.$nextTick(() => {
+          this.title = ''
+          this.description = ''
+          this.options = ['', '']
+          this.restricted = false
         })
 
+<<<<<<< HEAD
         this.contractAddress = deployedContract.options.address
         console.log('Contract deployed at:', this.contractAddress)
         alert('[ SUCCESS ] Contract deployed at: ' + this.contractAddress)
       } catch (error) {
         console.error('Error creating voting contract:', error)
         alert('[ ERROR ] Failed to deploy contract: ' + error.message)
+=======
+        alert('Poll created successfully' + (this.createdPoll ? ` at ${this.createdPoll}` : ''))
+      } catch (error) {
+        console.error('Error creating poll:', error)
+        alert('Failed to create poll: ' + (error?.message || error))
+>>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
       }
     }
   }
@@ -101,6 +162,7 @@ export default {
 </script>
 
 <style scoped>
+<<<<<<< HEAD
 .ballot-creation {
   max-width: 800px;
   margin: 0 auto;
@@ -253,4 +315,11 @@ export default {
     width: 100%;
   }
 }
+=======
+.row { margin-bottom: 0.75rem; }
+.options { margin: 1rem 0; }
+.option { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+.created { margin-top: 1rem; }
+code { font-family: monospace; }
+>>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
 </style>
