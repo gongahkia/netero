@@ -308,15 +308,3 @@ export default {
   
   .proposal-label {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-}
-</style>
-        console.error('Error casting vote:', error)
-        alert('Failed to cast vote. Make sure you have the right to vote and haven\'t voted before.')
-      }
-    }
-  }
-}
-</script>
