@@ -1,107 +1,137 @@
 <template>
   <div class="voting-interface">
     <h2>Cast Your Vote</h2>
-    <form @submit.prevent="castVote">
-      <div v-for="(proposal, index) in proposals" :key="index">
-        <input 
-          type="radio" 
-          :id="'proposal-' + index" 
-          :value="index" 
-          v-model="selectedProposal"
-        >
-        <label :for="'proposal-' + index">{{ web3 ? web3.utils.hexToUtf8(proposal.name) : '' }}</label>
+
+    <div class="selector">
+      <label>Org (defaults to your address):</label>
+      <input v-model="orgAddress" placeholder="0x..." />
+      <button @click="loadOrgPolls">Load Polls</button>
+    </div>
+
+    <div class="selector" v-if="polls.length">
+      <label>Select Poll:</label>
+      <select v-model="selectedPollAddress" @change="loadPoll">
+        <option disabled value="">-- choose a poll --</option>
+        <option v-for="addr in polls" :key="addr" :value="addr">{{ addr }}</option>
+      </select>
+    </div>
+
+    <div v-if="stateLabel" class="state-row">
+      <span class="badge" :class="stateClass">{{ stateLabel }}</span>
+    </div>
+
+    <form v-if="options.length" @submit.prevent="castVote">
+      <div v-for="(opt, index) in options" :key="index">
+        <input type="radio" :id="'proposal-' + index" :value="index" v-model.number="selectedProposal" />
+        <label :for="'proposal-' + index">{{ opt }}</label>
       </div>
-      <button type="submit" :disabled="selectedProposal === null">Cast Vote</button>
+      <button type="submit" :disabled="selectedProposal === null || !selectedPollAddress">Cast Vote</button>
     </form>
   </div>
+  
 </template>
 
 <script>
-import Web3 from 'web3'
-import VoteContract from '../../../core/build/contracts/Vote.json'
+import { initWeb3, getAccounts, getDeployedAddress, getContract } from '../eth'
+import PollFactoryArtifact from '../../../core/build/contracts/PollFactory.json'
+import PollArtifact from '../../../core/build/contracts/Poll.json'
 
 export default {
   name: 'VotingInterface',
+  computed: {
+    stateLabel() {
+      switch (this.state) {
+        case 0: return 'Draft'
+        case 1: return 'Active'
+        case 2: return 'Ended'
+        case 3: return 'Finalized'
+        default: return ''
+      }
+    },
+    stateClass() {
+      return {
+        draft: this.state === 0,
+        active: this.state === 1,
+        ended: this.state === 2,
+        finalized: this.state === 3
+      }
+    }
+  },
   data() {
     return {
-      proposals: [],
+      orgAddress: '',
+      polls: [],
+      selectedPollAddress: '',
+      options: [],
       selectedProposal: null,
-      web3: null,
-      contract: null
+      factory: null,
+      poll: null,
+      state: null
     }
   },
   async mounted() {
     try {
-      await this.initWeb3()
-      await this.loadProposals()
+      await initWeb3()
+      const accounts = await getAccounts()
+      this.orgAddress = accounts[0]
+      const addr = await getDeployedAddress(PollFactoryArtifact)
+      this.factory = await getContract(PollFactoryArtifact, addr)
+      await this.loadOrgPolls()
     } catch (error) {
       console.error('Error in mounted hook:', error)
     }
   },
   methods: {
-    async initWeb3() {
+    async loadOrgPolls() {
       try {
-        if (window.ethereum) {
-          this.web3 = new Web3(window.ethereum)
-          try {
-            await window.ethereum.request({ method: 'eth_requestAccounts' })
-          } catch (error) {
-            console.error("User denied account access")
-            return
-          }
-        } else if (window.web3) {
-          this.web3 = new Web3(window.web3.currentProvider)
-        } else {
-          console.log('Non-Ethereum browser detected. Consider using MetaMask!')
-          return
-        }
-
-        const networkId = await this.web3.eth.net.getId()
-        const deployedNetwork = VoteContract.networks[networkId]
-        if (!deployedNetwork) {
-          throw new Error('Contract not deployed on the current network')
-        }
-        this.contract = new this.web3.eth.Contract(
-          VoteContract.abi,
-          deployedNetwork.address
-        )
-      } catch (error) {
-        console.error('Failed to initialize Web3:', error)
-        alert('Failed to initialize Web3. Please make sure you are connected to the correct network and have MetaMask installed.')
+        if (!this.factory) return
+        const list = await this.factory.methods.getOrgPolls(this.orgAddress).call()
+        this.polls = list
+      } catch (e) {
+        console.error('Failed to load org polls', e)
       }
     },
-    async loadProposals() {
-      if (!this.web3 || !this.contract) {
-        console.error('Web3 or contract not initialized')
-        return
-      }
+    async loadPoll() {
       try {
-        const proposalCount = await this.contract.methods.proposals.length().call()
-        this.proposals = []
-        for (let i = 0; i < proposalCount; i++) {
-          const proposal = await this.contract.methods.proposals(i).call()
-          this.proposals.push(proposal)
-        }
-      } catch (error) {
-        console.error('Error loading proposals:', error)
-        alert('Failed to load proposals')
+        if (!this.selectedPollAddress) return
+        this.poll = await getContract(PollArtifact, this.selectedPollAddress)
+        const [opts, st] = await Promise.all([
+          this.poll.methods.getOptions().call(),
+          this.poll.methods.state().call()
+        ])
+        this.options = opts
+        this.selectedProposal = null
+        this.state = Number(st)
+      } catch (e) {
+        console.error('Failed to load poll', e)
       }
     },
     async castVote() {
-      if (!this.web3 || !this.contract) {
-        alert('Web3 is not initialized. Please make sure you are connected to the correct network and have MetaMask installed.')
+      if (!this.poll) {
+        alert('Select a poll first.')
         return
       }
       try {
-        const accounts = await this.web3.eth.getAccounts()
-        await this.contract.methods.vote(this.selectedProposal).send({ from: accounts[0] })
+        const accounts = await getAccounts()
+        await this.poll.methods.vote(this.selectedProposal).send({ from: accounts[0] })
         alert('Vote cast successfully!')
-        this.selectedProposal = null 
+        this.selectedProposal = null
       } catch (error) {
         console.error('Error casting vote:', error)
-        alert('Failed to cast vote. Make sure you have the right to vote and haven\'t voted before.')
+        alert('Failed to cast vote. You may not be allowlisted or have already voted.')
       }
     }
   }
 }
 </script>
+
+<style scoped>
+.selector { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
+input, select { padding: 0.4rem; }
+.state-row { margin-bottom: 0.5rem; }
+.badge { padding: 0.2rem 0.5rem; border-radius: 8px; font-size: 0.8rem; color: white; }
+.badge.draft { background: #7f8c8d; }
+.badge.active { background: #2ecc71; }
+.badge.ended { background: #e67e22; }
+.badge.finalized { background: #9b59b6; }
+</style>

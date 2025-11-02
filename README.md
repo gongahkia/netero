@@ -13,7 +13,7 @@ For the [stack used](#tech-used).
 
 ## Usage
 
-Instructions below are for local hosting.
+Instructions below are for local hosting with a local Ethereum node (Ganache).
 
 1. Install the [MetaMask](https://metamask.io/) Browser Extension.
     1. [Chrome Extension](https://chromewebstore.google.com/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn?hl=en&pli=1)
@@ -26,14 +26,17 @@ Instructions below are for local hosting.
     2. **New RPC URL**: *http://localhost:8545* 
     3. **Chain ID**: *1337* 
     4. **Currency Symbol**: *ETH*
-4. Run the following.
+4. Start a local chain and deploy contracts.
 
 ```console
 $ git clone https://github.com/gongahkia/netero
 $ cd netero/src
+# 1) Compile contracts (one-time when contracts change)
+$ (cd core && npx truffle compile)
+# 2) Start Ganache and migrate PollFactory (keeps running)
 $ python3 main.py
-$ cd netero-app/
-$ npm run serve
+# 3) In a new terminal, start the Vue app
+$ cd netero-app && npm install && npm run serve
 ```
 
 5. View `netero-app` at [localhost:8080](http://localhost:8080/).
@@ -77,7 +80,7 @@ graph TD
     J --> K[Vue initialization]
     J --> L[Router configuration]
     
-    M[Vote.sol] --> H
+    M[PollFactory.sol, Poll.sol] --> H
 ```
 
 ### Overview
@@ -95,17 +98,20 @@ sequenceDiagram
     Web3->>Blockchain: Connect to network
     User->>App: Select action (Register/Create/Vote/Results)
     
-    alt Register
-        App->>SmartContract: Call giveRightToVote()
-        SmartContract->>Blockchain: Update voter status
-    else Create Ballot
-        App->>SmartContract: Deploy new contract
-        SmartContract->>Blockchain: Store new contract
-    else Vote
+    alt Allowlist Voters (Admin)
+        App->>SmartContract: setAllowlisted(addresses[], allowed)
+        SmartContract->>Blockchain: Update allowlist mapping
+    else Create Poll (Admin)
+        App->>SmartContract: PollFactory.createPoll(...)
+        SmartContract->>Blockchain: Deploy Poll contract
+    else Activate/End/Finalize (Admin)
+        App->>SmartContract: Poll.activate()/end()/finalize()
+        SmartContract->>Blockchain: Update state
+    else Vote (Voter)
         App->>SmartContract: Call vote()
         SmartContract->>Blockchain: Record vote
     else View Results
-        App->>SmartContract: Call winningProposal() and winnerName()
+        App->>SmartContract: getOptions()/getTallies()
         SmartContract->>App: Return results
     end
     
