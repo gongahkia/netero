@@ -25,7 +25,31 @@ Instructions below are for local hosting.
     2. **New RPC URL**: *http://localhost:8545* 
     3. **Chain ID**: *1337* 
     4. **Currency Symbol**: *ETH*
-4. Run the following.
+4. Run the project.
+
+### Option A: Using the Orchestration Script (Recommended)
+
+**For WSL/Linux/Mac:**
+```console
+$ git clone https://github.com/gongahkia/netero
+$ cd netero
+$ ./start.sh
+```
+
+**For Windows:**
+```console
+$ git clone https://github.com/gongahkia/netero
+$ cd netero
+$ start.bat
+```
+
+The orchestration script will automatically:
+- Install dependencies if needed
+- Start Ganache (local blockchain)
+- Deploy smart contracts via Truffle
+- Start the Vue.js frontend
+
+### Option B: Manual Setup
 
 ```console
 $ git clone https://github.com/gongahkia/netero
