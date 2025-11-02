@@ -50,6 +50,7 @@ import VoteContract from '../../../core/build/contracts/Vote.json'
 
 export default {
   name: 'ResultsDisplay',
+  props: { address: { type: String, default: '' } },
   data() {
     return {
       proposals: [],
@@ -86,12 +87,13 @@ export default {
 
         const networkId = await this.web3.eth.net.getId()
         const deployedNetwork = VoteContract.networks[networkId]
-        if (!deployedNetwork) {
+        if (!deployedNetwork && !this.address) {
           throw new Error('Contract not deployed on the current network')
         }
+        const targetAddress = this.address && this.address.length > 0 ? this.address : deployedNetwork.address
         this.contract = new this.web3.eth.Contract(
           VoteContract.abi,
-          deployedNetwork.address
+          targetAddress
         )
       } catch (error) {
         console.error('Failed to initialize Web3:', error)

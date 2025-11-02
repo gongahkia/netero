@@ -30,14 +30,14 @@
       <div class="stack">
         <span class="section-title">Vote</span>
         <div class="card" style="padding:16px;">
-          <VotingInterface />
+          <VotingInterface :address="contractAddress || undefined" />
         </div>
       </div>
 
       <div class="stack">
         <span class="section-title">Results Snapshot</span>
         <div class="card" style="padding:16px;">
-          <ResultsDisplay />
+          <ResultsDisplay :address="contractAddress || undefined" />
         </div>
       </div>
     </section>
