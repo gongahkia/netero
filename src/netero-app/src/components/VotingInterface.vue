@@ -203,8 +203,8 @@ export default {
 }
 
 .proposal-option:hover {
-  background-color: rgba(0, 255, 0, 0.05);
-  border-color: var(--accent);
+  background-color: var(--bg-muted);
+  border-color: var(--text-primary);
 }
 
 .radio-input {
@@ -270,9 +270,9 @@ export default {
 }
 
 .btn-primary:hover:not(.btn-disabled) {
-  background-color: rgba(0, 255, 0, 0.1);
-  box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
-  text-shadow: 0 0 5px var(--accent);
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.25);
 }
 
 .btn-disabled {
