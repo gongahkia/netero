@@ -9,6 +9,7 @@
       <router-link to="/create-ballot" class="nav-link">Create Ballot</router-link>
       <router-link to="/vote" class="nav-link">Vote</router-link>
       <router-link to="/results" class="nav-link">Results</router-link>
+      <router-link to="/analytics" class="nav-link">Analytics</router-link>
     </nav>
     <router-view></router-view>
   </div>

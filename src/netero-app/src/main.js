@@ -6,12 +6,14 @@ import Register from './components/VoterRegistration.vue'
 import CreateBallot from './components/BallotCreation.vue'
 import Vote from './components/VotingInterface.vue'
 import Results from './components/ResultsDisplay.vue'
+import Analytics from './components/Analytics.vue'
 
 const routes = [
   { path: '/register', component: Register },
   { path: '/create-ballot', component: CreateBallot },
   { path: '/vote', component: Vote },
-  { path: '/results', component: Results }
+  { path: '/results', component: Results },
+  { path: '/analytics', component: Analytics }
 ]
 
 const router = createRouter({
