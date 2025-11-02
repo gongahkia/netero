@@ -2,7 +2,7 @@
   /* Typography */
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 
-  /* Palette - light, clean, technical */
+  /* Palette - pure monochrome */
   --bg-app: #f7f7f8;        /* page background */
   --bg-surface: #ffffff;    /* cards, panels */
   --bg-muted: #fafafa;      /* soft background */
@@ -14,14 +14,16 @@
   --border: #e5e7eb;        /* light border */
   --border-strong: #d1d5db; /* stronger border */
 
-  --accent: #0ea5e9;        /* cyan-blue accent */
-  --accent-contrast: #ffffff;
+  /* Monochrome accent (inverted) */
+  --accent: #111827;        /* black for primary buttons */
+  --accent-contrast: #ffffff; /* white text on black */
+  --accent-hover: #000000;  /* pure black on hover */
 
   /* Sizing & radius */
   --radius: 10px;
   --radius-sm: 8px;
   --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.06);
-  --shadow-md: 0 8px 24px rgba(17, 24, 39, 0.08);
+  --shadow-md: 0 8px 24px rgba(17, 24, 39, 0.12);
 }
 
 /* Legacy variable aliases (from earlier styles) */
@@ -82,7 +84,9 @@ body {
   color: var(--accent-contrast);
 }
 .btn-primary:hover {
-  box-shadow: 0 8px 24px rgba(14,165,233,0.25);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.25);
 }
 
 .input, .select {
@@ -96,8 +100,8 @@ body {
   transition: border-color .2s ease, box-shadow .2s ease;
 }
 .input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(14,165,233,0.12);
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.08);
 }
 
 .section-title {
