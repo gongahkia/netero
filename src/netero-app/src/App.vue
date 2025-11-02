@@ -191,10 +191,5 @@ body {
     font-size: 0.8rem;
     padding: 0.4rem 0.8rem;
   }
-  }
-
-  .nav-link {
-    margin: 5px 0;
-  }
 }
 </style>
