@@ -85,7 +85,7 @@ fi
 # Step 2: Start Ganache in the background
 print_status "Starting Ganache (local blockchain)..."
 cd src/core
-npx ganache --port 8545 --chainId 1337 > ../../logs/ganache.log 2>&1 &
+npx ganache --server.port 8545 --chain.chainId 1337 > ../../logs/ganache.log 2>&1 &
 GANACHE_PID=$!
 cd ../..
 

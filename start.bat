@@ -36,7 +36,7 @@ if not exist "src\netero-app\node_modules\" (
 REM Start the orchestration
 echo.
 echo [NETERO] Starting Ganache in a new window...
-start "Ganache" cmd /k "cd src\core && npx ganache --port 8545 --chainId 1337"
+start "Ganache" cmd /k "cd src\core && npx ganache --server.port 8545 --chain.chainId 1337"
 
 echo [NETERO] Waiting for Ganache to initialize...
 timeout /t 5 /nobreak >nul
