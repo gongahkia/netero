@@ -32,7 +32,7 @@
 </template>
 
 <script>
-import { initWeb3, getAccounts, getDeployedAddress, getContract } from '../eth'
+import { initWeb3, getAccounts, getDeployedAddress, getContract, subscribeToEventOptional } from '../eth'
 import PollFactoryArtifact from '../../../core/build/contracts/PollFactory.json'
 import PollArtifact from '../../../core/build/contracts/Poll.json'
 
@@ -66,7 +66,8 @@ export default {
       selectedProposal: null,
       factory: null,
       poll: null,
-      state: null
+      state: null,
+      stateSub: null
     }
   },
   async mounted() {
@@ -79,6 +80,11 @@ export default {
       await this.loadOrgPolls()
     } catch (error) {
       console.error('Error in mounted hook:', error)
+    }
+  },
+  beforeUnmount() {
+    if (this.stateSub && this.stateSub.unsubscribe) {
+      try { this.stateSub.unsubscribe() } catch (e) {}
     }
   },
   methods: {
@@ -95,6 +101,10 @@ export default {
       try {
         if (!this.selectedPollAddress) return
         this.poll = await getContract(PollArtifact, this.selectedPollAddress)
+        if (this.stateSub && this.stateSub.unsubscribe) {
+          try { this.stateSub.unsubscribe() } catch (e) {}
+          this.stateSub = null
+        }
         const [opts, st] = await Promise.all([
           this.poll.methods.getOptions().call(),
           this.poll.methods.state().call()
@@ -102,6 +112,16 @@ export default {
         this.options = opts
         this.selectedProposal = null
         this.state = Number(st)
+
+        // Subscribe to state changes if WS is available
+        try {
+          this.stateSub = subscribeToEventOptional(PollArtifact.abi, this.selectedPollAddress, 'StateChanged', async () => {
+            try {
+              const s = await this.poll.methods.state().call()
+              this.state = Number(s)
+            } catch (e) {}
+          })
+        } catch (e) {}
       } catch (e) {
         console.error('Failed to load poll', e)
       }

@@ -40,7 +40,7 @@
 </template>
 
 <script>
-import { initWeb3, getAccounts, getDeployedAddress, getContract } from '../eth'
+import { initWeb3, getAccounts, getDeployedAddress, getContract, subscribeToEventOptional } from '../eth'
 import PollFactoryArtifact from '../../../core/build/contracts/PollFactory.json'
 import PollArtifact from '../../../core/build/contracts/Poll.json'
 import { Chart, ArcElement, Tooltip, Legend } from 'chart.js'
@@ -81,7 +81,8 @@ export default {
       chartInstance: null,
       state: 0,
       isAdmin: false,
-      refreshId: null
+      refreshId: null,
+      eventSubs: []
     }
   },
   async mounted() {
@@ -98,8 +99,16 @@ export default {
   },
   beforeUnmount() {
     if (this.refreshId) clearInterval(this.refreshId)
+    this.teardownSubs()
   },
   methods: {
+    teardownSubs() {
+      if (!this.eventSubs) return
+      try {
+        this.eventSubs.forEach(s => { if (s && s.unsubscribe) s.unsubscribe() })
+      } catch (e) {}
+      this.eventSubs = []
+    },
     async loadOrgPolls() {
       try {
         if (!this.factory) return
@@ -114,10 +123,20 @@ export default {
         clearInterval(this.refreshId)
         this.refreshId = null
       }
+      this.teardownSubs()
       await this.loadResults()
       this.refreshId = setInterval(() => {
         this.loadResults(true)
       }, 3000)
+
+      // Try event-driven updates if WS available
+      try {
+        const sub1 = subscribeToEventOptional(PollArtifact.abi, this.selectedPollAddress, 'Voted', () => this.loadResults(true))
+        const sub2 = subscribeToEventOptional(PollArtifact.abi, this.selectedPollAddress, 'StateChanged', () => this.loadResults(true))
+        this.eventSubs = [sub1, sub2].filter(Boolean)
+      } catch (e) {
+        // no-op; will keep polling
+      }
     },
     async loadResults(isRefresh = false) {
       try {

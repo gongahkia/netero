@@ -17,6 +17,16 @@ Prereqs
 - graph-cli installed (npm i)
 - Truffle migration already run so PollFactory is deployed; update the address in subgraph.yaml
 
+Local graph-node via Docker
+- A ready-to-use docker-compose is provided at ../../indexer/docker-compose.yml
+- On Linux, it maps host.docker.internal to the host gateway so the graph-node can reach Ganache at http://127.0.0.1:8545
+- Start the stack:
+   docker compose -f ../../docker-compose.yml up -d
+   - Graph endpoints:
+      - Admin: http://127.0.0.1:8020
+      - GraphQL: http://127.0.0.1:8000
+      - IPFS API: http://127.0.0.1:5001
+
 Quick start (local graph-node)
 1) Install deps
    npm install
