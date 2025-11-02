@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 const fs = require('fs')
 const path = require('path')
-const yaml = require('js-yaml')
 
 const root = __dirname
 const subgraphYamlPath = path.join(root, '..', 'subgraph.yaml')
@@ -27,14 +26,24 @@ function getAddressFromArtifact() {
 
 function main() {
   const addr = getAddressFromArtifact()
-  const doc = yaml.load(fs.readFileSync(subgraphYamlPath, 'utf8'))
-  if (!doc || !doc.dataSources || !doc.dataSources.length) {
-    throw new Error('Malformed subgraph.yaml: no dataSources')
+  let text = fs.readFileSync(subgraphYamlPath, 'utf8')
+  // Try to replace existing address line keeping indentation
+  const replaced = text.replace(/^(\s*)address:\s*"0x[^"]*".*$/m, (m, indent) => `${indent}address: "${addr}"`)
+  if (replaced !== text) {
+    fs.writeFileSync(subgraphYamlPath, replaced)
+    console.log(`Updated address in subgraph.yaml to ${addr}`)
+    return
   }
-  doc.dataSources[0].source.address = addr
-  const out = yaml.dump(doc, { noRefs: true, lineWidth: -1 })
-  fs.writeFileSync(subgraphYamlPath, out)
-  console.log(`Updated subgraph.yaml dataSources[0].source.address to ${addr}`)
+  // If address line not present (or file malformed), try to insert under 'source:'
+  const srcIdx = text.indexOf('\n    source:')
+  if (srcIdx >= 0) {
+    const insertAt = srcIdx + '\n    source:'.length
+    const fixed = text.slice(0, insertAt) + `\n      address: "${addr}"` + text.slice(insertAt)
+    fs.writeFileSync(subgraphYamlPath, fixed)
+    console.log(`Inserted address in subgraph.yaml to ${addr}`)
+    return
+  }
+  throw new Error('Could not locate source: block to set address')
 }
 
 main()

@@ -9,7 +9,7 @@
     "deploy-local": "graph deploy --node http://127.0.0.1:8020 --ipfs http://127.0.0.1:5001 netero/subgraph"
   },
   "devDependencies": {
-    "@graphprotocol/graph-cli": "^0.66.2",
+    "@graphprotocol/graph-cli": "latest",
     "@graphprotocol/graph-ts": "^0.33.0",
     "js-yaml": "^4.1.0"
   }
