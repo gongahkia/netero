@@ -1,93 +1,84 @@
 <template>
-  <div class="container stack-lg">
-    <header class="stack">
-      <h1>// ORGANIZER_DASHBOARD</h1>
-      <p class="subtitle">Create ballots, register voters, and manage elections</p>
-
+  <div class="dashboard container">
+    <header class="page-header">
+      <div>
+        <h1>Organizer workspace</h1>
+        <p>Launch ballots, manage participation, and monitor outcomes with real-time insight.</p>
+      </div>
       <WalletConnection />
-
-      <div class="instructions-card card stack">
-        <span class="section-title">// WORKFLOW</span>
-        <div class="instruction-steps">
-          <div class="step">
-            <span class="step-number">01.</span>
-            <div class="step-content">
-              <strong>Connect MetaMask to local network</strong>
-              <p>Ensure MetaMask is connected to http://localhost:8545 (Chain ID: 1337)</p>
-            </div>
-          </div>
-          <div class="step">
-            <span class="step-number">02.</span>
-            <div class="step-content">
-              <strong>Deploy a new voting contract</strong>
-              <p>Use the "Contract Deployment" section below to create proposals and deploy</p>
-              <p>Save the contract address that appears after deployment</p>
-            </div>
-          </div>
-          <div class="step">
-            <span class="step-number">03.</span>
-            <div class="step-content">
-              <strong>Register member wallet addresses</strong>
-              <p>Use "Member Registration" to grant voting rights to participants</p>
-              <p>Members must provide their MetaMask addresses</p>
-            </div>
-          </div>
-          <div class="step">
-            <span class="step-number">04.</span>
-            <div class="step-content">
-              <strong>Share contract address with members</strong>
-              <p>Members need this address to connect and cast votes</p>
-            </div>
-          </div>
-          <div class="step">
-            <span class="step-number">05.</span>
-            <div class="step-content">
-              <strong>Monitor results in real-time</strong>
-              <p>View live voting results in the "Live Results" section below</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="network-info card">
-        <span class="section-title">// NETWORK_STATUS</span>
-        <div class="info-grid">
-          <div class="info-item">
-            <span class="info-label">RPC URL:</span>
-            <span class="info-value">http://localhost:8545</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Chain ID:</span>
-            <span class="info-value">1337 (Local)</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Frontend:</span>
-            <span class="info-value">http://localhost:8080</span>
-          </div>
-        </div>
-      </div>
     </header>
 
-    <section class="stack-lg">
-      <div class="stack">
-        <span class="section-title">// CONTRACT_DEPLOYMENT</span>
-        <div class="card deployment-section">
-          <BallotCreation />
+    <section class="card summary">
+      <div class="summary-text">
+        <h2>Operating context</h2>
+        <p>You're connected on localhost for rapid iteration. Use these details when onboarding voters.</p>
+      </div>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <span class="label">RPC endpoint</span>
+          <span class="value">http://localhost:8545</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Chain ID</span>
+          <span class="value">1337</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Frontend</span>
+          <span class="value">http://localhost:8080</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Active polls</span>
+          <span class="value">{{ polls.length }}</span>
         </div>
       </div>
+      <button class="btn btn-ghost" type="button" @click="refreshPolls">
+        Refresh list
+      </button>
+    </section>
 
-      <div class="stack">
-        <span class="section-title">// MEMBER_REGISTRATION</span>
-        <div class="card registration-section">
-          <VoterRegistration />
-        </div>
+    <section class="grid layout-management">
+      <div class="card">
+        <header class="section-head">
+          <div>
+            <h3>Create a ballot</h3>
+            <p>Define your proposal, schedule, and voting mode. The contract auto-closes when the window ends.</p>
+          </div>
+        </header>
+        <BallotCreation @poll-created="handlePollCreated" />
       </div>
 
-      <div class="stack">
-        <span class="section-title">// LIVE_RESULTS</span>
-        <div class="card results-section">
-          <ResultsDisplay />
-        </div>
+      <div class="card">
+        <header class="section-head">
+          <div>
+            <h3>Voter management</h3>
+            <p>Bulk-allowlist wallets or revoke access in a single transaction.</p>
+          </div>
+        </header>
+        <VoterRegistration @polls-updated="handlePollsUpdated" />
+      </div>
+    </section>
+
+    <NotificationPanel :poll-addresses="polls" role="organization" />
+
+    <section class="grid layout-results">
+      <div class="card">
+        <header class="section-head">
+          <div>
+            <h3>Live results</h3>
+            <p>Select a poll to see live tallies and transition the state when ready.</p>
+          </div>
+        </header>
+        <ResultsDisplay :org-address="orgAddress" @polls-updated="handlePollsUpdated" />
+      </div>
+
+      <div class="card analytics-card">
+        <header class="section-head">
+          <div>
+            <h3>Analytics</h3>
+            <p>Pull subgraph insights to measure engagement across your ballots.</p>
+          </div>
+        </header>
+        <Analytics :org-address="orgAddress" :focus-poll="primaryPoll" />
       </div>
     </section>
   </div>
@@ -98,107 +89,185 @@ import BallotCreation from './BallotCreation.vue'
 import VoterRegistration from './VoterRegistration.vue'
 import ResultsDisplay from './ResultsDisplay.vue'
 import WalletConnection from './WalletConnection.vue'
+import NotificationPanel from './NotificationPanel.vue'
+import Analytics from './Analytics.vue'
+import { initWeb3, getAccounts, getDeployedAddress, getContract } from '../eth'
+import PollFactoryArtifact from '../../../core/build/contracts/PollFactory.json'
 
 export default {
   name: 'OrgDashboard',
-  components: { BallotCreation, VoterRegistration, ResultsDisplay, WalletConnection }
+  components: {
+    BallotCreation,
+    VoterRegistration,
+    ResultsDisplay,
+    WalletConnection,
+    NotificationPanel,
+    Analytics,
+  },
+  data() {
+    return {
+      polls: [],
+      orgAddress: '',
+      factory: null,
+    }
+  },
+  computed: {
+    primaryPoll() {
+      return this.polls[0] || ''
+    },
+  },
+  async created() {
+    await this.bootstrap()
+  },
+  methods: {
+    async bootstrap() {
+      try {
+        await initWeb3()
+        const accounts = await getAccounts()
+        this.orgAddress = accounts[0]
+        const address = await getDeployedAddress(PollFactoryArtifact)
+        this.factory = await getContract(PollFactoryArtifact, address)
+        await this.refreshPolls()
+      } catch (e) {
+        console.error('Organizer dashboard bootstrap failed', e)
+      }
+    },
+    async refreshPolls() {
+      if (!this.factory || !this.orgAddress) return
+      try {
+        const list = await this.factory.methods.getOrgPolls(this.orgAddress).call()
+        this.polls = Array.from(new Set(list))
+      } catch (e) {
+        console.error('Unable to refresh poll list', e)
+      }
+    },
+    handlePollCreated(address) {
+      if (!address) return
+      if (!this.polls.includes(address)) {
+        this.polls = [address, ...this.polls]
+      }
+    },
+    handlePollsUpdated(list = []) {
+      if (!list.length) return
+      const merged = new Set([...this.polls, ...list])
+      this.polls = Array.from(merged)
+    },
+  },
 }
 </script>
 
 <style scoped>
-h1 {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-
-.subtitle {
-  color: var(--text-secondary);
-  margin: 8px 0 0 0;
-  font-size: 14px;
-}
-
-.instructions-card {
-  padding: 24px;
-  margin-top: 24px;
-}
-
-.instruction-steps {
+.dashboard {
   display: grid;
-  gap: 20px;
-  margin-top: 16px;
+  gap: 32px;
 }
 
-.step {
+.page-header {
   display: flex;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 24px;
   align-items: flex-start;
 }
 
-.step-number {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary);
-  min-width: 40px;
+.page-header h1 {
+  margin: 0 0 12px 0;
+  font-size: 28px;
 }
 
-.step-content {
-  flex: 1;
+.page-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  max-width: 460px;
 }
 
-.step-content strong {
-  display: block;
-  color: var(--text-primary);
-  margin-bottom: 6px;
+.summary {
+  display: grid;
+  gap: 24px;
+  padding: 28px;
+}
+
+.summary-text h2 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+}
+
+.summary-text p {
+  margin: 0;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
-.step-content p {
-  margin: 4px 0;
+.summary-grid {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 720px) {
+  .summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.summary-item {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-muted);
+  display: grid;
+  gap: 6px;
+}
+
+.summary-item .label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summary-item .value {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.layout-management,
+.layout-results {
+  display: grid;
+  gap: 32px;
+}
+
+@media (min-width: 1080px) {
+  .layout-management,
+  .layout-results {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.section-head h3 {
+  margin: 0 0 6px 0;
+  font-size: 18px;
+}
+
+.section-head p {
+  margin: 0;
   color: var(--text-secondary);
   font-size: 13px;
-  line-height: 1.5;
 }
 
-.network-info {
-  padding: 20px;
-  margin-top: 16px;
+.analytics-card {
+  padding-bottom: 8px;
 }
 
-.info-grid {
-  display: grid;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.info-item {
-  display: flex;
-  gap: 12px;
-  font-size: 13px;
-}
-
-.info-label {
-  color: var(--text-muted);
-  min-width: 100px;
-}
-
-.info-value {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.deployment-section,
-.registration-section,
-.results-section {
-  padding: 20px;
-}
-
-.section-title {
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  margin-bottom: 12px;
-  display: block;
+@media (max-width: 880px) {
+  .page-header {
+    flex-direction: column;
+  }
 }
 </style>

@@ -1,67 +1,102 @@
 <template>
-  <div class="ballot-creation">
-<<<<<<< HEAD
-    <div class="section-header">
-      <h2>// CREATE_VOTING_CONTRACT</h2>
-      <div class="status-indicator">[ READY ]</div>
+  <form class="ballot-form" @submit.prevent="createPoll">
+    <div class="form-grid">
+      <label>
+        <span>Title</span>
+        <input v-model.trim="title" class="input" placeholder="e.g. Q4 budget approval" required />
+      </label>
+      <label>
+        <span>Voting mode</span>
+        <div class="toggle-row">
+          <input id="restrictedToggle" type="checkbox" v-model="restricted" />
+          <label for="restrictedToggle">Restrict to allowlisted wallets</label>
+        </div>
+      </label>
     </div>
-    
-    <form @submit.prevent="createVotingContract" class="contract-form">
-      <div class="proposals-section">
-        <label class="section-label">&gt; PROPOSALS:</label>
-        <div v-for="(option, index) in options" :key="index" class="input-group">
-          <span class="input-prefix">{{ String(index + 1).padStart(2, '0') }}:</span>
-          <input 
-            v-model="options[index]" 
-            :placeholder="`PROPOSAL_${index + 1}`" 
-            required
-            class="terminal-input"
-          >
-        </div>
-      </div>
-      
-      <div class="button-group">
-        <button type="button" @click="addOption" class="btn-secondary">
-          [ + ADD_PROPOSAL ]
-        </button>
-        <button type="submit" class="btn-primary">
-          [ DEPLOY_CONTRACT ]
-        </button>
-      </div>
-      
-      <div v-if="contractAddress" class="contract-result">
-        <div class="result-label">&gt; CONTRACT_DEPLOYED:</div>
-        <div class="contract-address">{{ contractAddress }}</div>
-      </div>
-=======
-    <h2>Create Poll</h2>
-    <form @submit.prevent="createPoll">
-      <div class="row">
-        <input v-model="title" placeholder="Title" required />
-      </div>
-      <div class="row">
-        <textarea v-model="description" placeholder="Description" rows="3" />
-      </div>
-      <div class="row">
-        <label><input type="checkbox" v-model="restricted" /> Restricted (allowlist required)</label>
-      </div>
-      <div class="options">
-        <h3>Options</h3>
-        <div v-for="(option, index) in options" :key="index" class="option">
-          <input v-model="options[index]" :placeholder="`Option ${index + 1}`" required />
-          <button type="button" @click="removeOption(index)" v-if="options.length > 2">Remove</button>
-        </div>
-        <button type="button" @click="addOption">Add Option</button>
-      </div>
-      <button type="submit">Create & Activate</button>
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
-    </form>
 
-    <div v-if="createdPoll" class="created">
-      <p>Created poll at: <code>{{ createdPoll }}</code></p>
+    <label>
+      <span>Description</span>
+      <textarea
+        v-model.trim="description"
+        rows="3"
+        class="input"
+        placeholder="Add context so voters understand what they're approving"
+      ></textarea>
+    </label>
+
+    <section class="options">
+      <div class="options-header">
+        <span>Options</span>
+        <button class="btn btn-ghost" type="button" @click="addOption">Add option</button>
+      </div>
+      <div v-for="(option, index) in options" :key="index" class="option-row">
+        <input
+          v-model.trim="options[index]"
+          class="input"
+          :placeholder="`Option ${index + 1}`"
+          required
+        />
+        <button
+          v-if="options.length > 2"
+          class="btn btn-ghost"
+          type="button"
+          @click="removeOption(index)"
+        >
+          Remove
+        </button>
+      </div>
+    </section>
+
+    <section class="schedule">
+      <div class="schedule-header">
+        <span>Scheduling</span>
+        <div class="radio-group">
+          <label><input type="radio" value="immediate" v-model="startMode" /> Open immediately</label>
+          <label><input type="radio" value="scheduled" v-model="startMode" /> Start later</label>
+        </div>
+      </div>
+
+      <div v-if="startMode === 'scheduled'" class="schedule-grid">
+        <label>
+          <span>Start date & time</span>
+          <input type="datetime-local" class="input" v-model="scheduledAt" required />
+        </label>
+      </div>
+
+      <div class="duration-grid">
+        <label>
+          <span>Duration</span>
+          <div class="duration-row">
+            <input type="number" min="0" class="input" v-model.number="durationHours" />
+            <span class="suffix">hours</span>
+            <input type="number" min="0" max="59" class="input" v-model.number="durationMinutes" />
+            <span class="suffix">minutes</span>
+          </div>
+        </label>
+        <label class="auto-activate">
+          <input type="checkbox" v-model="autoActivate" />
+          <span>Activate automatically after deployment</span>
+        </label>
+      </div>
+    </section>
+
+    <p v-if="error" class="form-error">{{ error }}</p>
+
+    <button class="btn btn-primary" type="submit" :disabled="submitting">
+      {{ submitting ? 'Deploying…' : 'Deploy poll' }}
+    </button>
+
+    <div v-if="createdPoll.address" class="result-card">
+      <div>
+        <span class="label">Poll address</span>
+        <code>{{ createdPoll.address }}</code>
+      </div>
+      <div class="result-meta" v-if="createdPoll.endTime">
+        <span class="label">Closes</span>
+        <span>{{ formatDate(createdPoll.endTime * 1000) }}</span>
+      </div>
     </div>
-  </div>
-  
+  </form>
 </template>
 
 <script>
@@ -71,20 +106,25 @@ import PollArtifact from '../../../core/build/contracts/Poll.json'
 
 export default {
   name: 'BallotCreation',
+  emits: ['poll-created'],
   data() {
     return {
       title: '',
       description: '',
       options: ['', ''],
-<<<<<<< HEAD
-      web3: null,
-      contract: null,
-      contractAddress: null
-=======
       restricted: false,
+      startMode: 'immediate',
+      scheduledAt: '',
+      durationHours: 0,
+      durationMinutes: 30,
+      autoActivate: true,
+      submitting: false,
+      createdPoll: {
+        address: '',
+        endTime: 0,
+      },
+      error: '',
       factory: null,
-      createdPoll: ''
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
     }
   },
   async mounted() {
@@ -92,6 +132,7 @@ export default {
   },
   methods: {
     async init() {
+      if (this.factory) return
       await initWeb3()
       const address = await getDeployedAddress(PollFactoryArtifact)
       this.factory = await getContract(PollFactoryArtifact, address)
@@ -102,224 +143,244 @@ export default {
     removeOption(index) {
       this.options.splice(index, 1)
     },
-    async createPoll() {
-      try {
-        if (!this.factory) await this.init()
-        const accounts = await getAccounts()
-        const org = accounts[0] // MVP: org = admin/creator address
-        const startTime = 0
-        const endTime = 0
-        const tx = await this.factory.methods.createPoll(
-          org,
-          this.title,
-          this.description,
-          this.options,
-          startTime,
-          endTime,
-          this.restricted
-        ).send({ from: accounts[0] })
-
-<<<<<<< HEAD
-        const proposalNames = this.options.map(option => this.web3.utils.asciiToHex(option))
-        const initialAuthorities = accounts.slice(0, 3)
-=======
-        // Get created poll address from event
-        const ev = tx.events?.PollCreated || (tx.logs || []).find(l => l.event === 'PollCreated')
-        const pollAddress = ev ? (ev.returnValues?.poll || ev.args?.poll) : null
-        this.createdPoll = pollAddress || ''
-
-        // Auto-activate
-        if (pollAddress) {
-          const poll = await getContract(PollArtifact, pollAddress)
-          await poll.methods.activate().send({ from: accounts[0] })
-        }
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
-
-        this.$nextTick(() => {
-          this.title = ''
-          this.description = ''
-          this.options = ['', '']
-          this.restricted = false
-        })
-
-<<<<<<< HEAD
-        this.contractAddress = deployedContract.options.address
-        console.log('Contract deployed at:', this.contractAddress)
-        alert('[ SUCCESS ] Contract deployed at: ' + this.contractAddress)
-      } catch (error) {
-        console.error('Error creating voting contract:', error)
-        alert('[ ERROR ] Failed to deploy contract: ' + error.message)
-=======
-        alert('Poll created successfully' + (this.createdPoll ? ` at ${this.createdPoll}` : ''))
-      } catch (error) {
-        console.error('Error creating poll:', error)
-        alert('Failed to create poll: ' + (error?.message || error))
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
+    validateOptions() {
+      const filled = this.options.filter((option) => option && option.trim().length)
+      if (filled.length < 2) {
+        throw new Error('Provide at least two options')
       }
-    }
-  }
+    },
+    computeSchedule() {
+      const now = Math.floor(Date.now() / 1000)
+      let startTime = 0
+      if (this.startMode === 'scheduled') {
+        if (!this.scheduledAt) throw new Error('Select a start date')
+        const parsed = Math.floor(new Date(this.scheduledAt).getTime() / 1000)
+        if (!parsed || Number.isNaN(parsed)) throw new Error('Invalid start time')
+        startTime = parsed
+      } else {
+        startTime = now
+      }
+      const durationSeconds = (Number(this.durationHours) || 0) * 3600 + (Number(this.durationMinutes) || 0) * 60
+      const endTime = durationSeconds > 0 ? startTime + durationSeconds : 0
+      return { startTime, endTime }
+    },
+    async createPoll() {
+      this.error = ''
+      try {
+        this.validateOptions()
+        const { startTime, endTime } = this.computeSchedule()
+        await this.init()
+        this.submitting = true
+        const accounts = await getAccounts()
+        const org = accounts[0]
+        const tx = await this.factory.methods
+          .createPoll(org, this.title, this.description, this.options, startTime, endTime, this.restricted)
+          .send({ from: accounts[0] })
+
+        const event = tx.events?.PollCreated || (tx.logs || []).find((log) => log.event === 'PollCreated')
+        const pollAddress = event ? event.returnValues?.poll || event.args?.poll : null
+        this.createdPoll = {
+          address: pollAddress || '',
+          endTime,
+        }
+        if (pollAddress) {
+          this.$emit('poll-created', pollAddress)
+          if (this.autoActivate) {
+            try {
+              const poll = await getContract(PollArtifact, pollAddress)
+              await poll.methods.activate().send({ from: accounts[0] })
+            } catch (activationError) {
+              console.warn('Auto-activation failed', activationError)
+            }
+          }
+        }
+
+        this.resetForm()
+      } catch (error) {
+        console.error('Error creating poll', error)
+        this.error = error?.message || 'Failed to deploy poll'
+      } finally {
+        this.submitting = false
+      }
+    },
+    resetForm() {
+      this.title = ''
+      this.description = ''
+      this.options = ['', '']
+      this.restricted = false
+      this.startMode = 'immediate'
+      this.scheduledAt = ''
+      this.durationHours = 0
+      this.durationMinutes = 30
+      this.autoActivate = true
+    },
+    formatDate(timestamp) {
+      const date = new Date(Number(timestamp))
+      return date.toLocaleString()
+    },
+  },
 }
 </script>
 
 <style scoped>
-<<<<<<< HEAD
-.ballot-creation {
-  max-width: 800px;
-  margin: 0 auto;
+.ballot-form {
+  display: grid;
+  gap: 24px;
 }
 
-.section-header {
+.ballot-form label > span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.form-grid {
+  display: grid;
+  gap: 18px;
+}
+
+@media (min-width: 880px) {
+  .form-grid {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-muted);
+}
+
+.options {
+  display: grid;
+  gap: 16px;
+}
+
+.options-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
 }
 
-.section-header h2 {
-  color: var(--text-primary);
-  font-size: 1.5rem;
-  font-weight: bold;
-  letter-spacing: 0.1rem;
+.option-row {
+  display: grid;
+  gap: 12px;
 }
 
-.status-indicator {
+@media (min-width: 720px) {
+  .option-row {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+}
+
+.schedule {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-muted);
+}
+
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.schedule-header span {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.radio-group {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.schedule-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.duration-grid {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 720px) {
+  .duration-grid {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+}
+
+.duration-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, auto);
+  align-items: center;
+}
+
+.duration-row .input {
+  width: 100px;
+}
+
+.suffix {
+  font-size: 13px;
   color: var(--text-secondary);
-  font-size: 0.9rem;
 }
 
-.contract-form {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  padding: 2rem;
-}
-
-.proposals-section {
-  margin-bottom: 2rem;
-}
-
-.section-label {
-  display: block;
-  color: var(--text-secondary);
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-  letter-spacing: 0.1rem;
-}
-
-.input-group {
+.auto-activate {
   display: flex;
   align-items: center;
-  margin-bottom: 1rem;
-  gap: 1rem;
-}
-
-.input-prefix {
-  color: var(--text-muted);
-  min-width: 40px;
-  font-size: 0.9rem;
-}
-
-.terminal-input {
-  flex: 1;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 0.8rem 1rem;
-  font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
-  font-size: 0.9rem;
-  transition: all 0.3s ease;
-}
-
-.terminal-input:focus {
-  outline: none;
-  border-color: var(--text-primary);
-  box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.08);
-}
-
-.terminal-input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.5;
-}
-
-.button-group {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.btn-primary,
-.btn-secondary {
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 0.8rem 1.5rem;
-  font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
-  font-size: 0.9rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  letter-spacing: 0.05rem;
-}
-
-.btn-primary:hover,
-.btn-secondary:hover {
-  background-color: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-contrast);
-  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.25);
-}
-
-.btn-primary {
-  border-width: 2px;
-}
-
-.contract-result {
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid var(--border-color);
-}
-
-.result-label {
+  gap: 10px;
+  font-size: 13px;
   color: var(--text-secondary);
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
 }
 
-.contract-address {
-  color: var(--text-primary);
-  font-size: 0.85rem;
-  word-break: break-all;
-  padding: 1rem;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
+.form-error {
+  color: #d14343;
+  font-size: 13px;
 }
 
-@media (max-width: 768px) {
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-  
-  .contract-form {
-    padding: 1rem;
-  }
-  
-  .button-group {
-    flex-direction: column;
-  }
-  
-  .btn-primary,
-  .btn-secondary {
-    width: 100%;
-  }
+.result-card {
+  margin-top: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-muted);
+  display: grid;
+  gap: 12px;
 }
-=======
-.row { margin-bottom: 0.75rem; }
-.options { margin: 1rem 0; }
-.option { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
-.created { margin-top: 1rem; }
-code { font-family: monospace; }
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
+
+.result-card .label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.result-card code {
+  font-size: 14px;
+}
+
+.result-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 </style>

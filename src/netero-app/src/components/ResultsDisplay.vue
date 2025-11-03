@@ -1,81 +1,70 @@
 <template>
-  <div class="results-display">
-<<<<<<< HEAD
-    <div class="section-header">
-      <h2>// VOTING_RESULTS</h2>
-      <div class="status-indicator">[ {{ proposals.length }} PROPOSALS ]</div>
-=======
-    <h2>Voting Results</h2>
-
-    <div class="selector">
-      <label>Org (defaults to your address):</label>
-      <input v-model="orgAddress" placeholder="0x..." />
-      <button @click="loadOrgPolls">Load Polls</button>
-    </div>
-
-    <div class="selector" v-if="polls.length">
-      <label>Select Poll:</label>
-      <select v-model="selectedPollAddress" @change="onPollChange">
-        <option disabled value="">-- choose a poll --</option>
-        <option v-for="addr in polls" :key="addr" :value="addr">{{ addr }}</option>
-      </select>
-    </div>
-
-    <div v-if="options.length">
-      <div class="header-row">
-        <h3>{{ title }}</h3>
-        <span class="badge" :class="stateClass">{{ stateLabel }}</span>
+  <div class="results">
+    <section class="picker">
+      <div class="picker-row">
+        <label>
+          <span>Organizer</span>
+          <input v-model="orgAddress" class="input" placeholder="0x..." />
+        </label>
+        <button class="btn btn-ghost" type="button" @click="loadOrgPolls">Refresh</button>
       </div>
-      <ul>
-        <li v-for="(opt, idx) in options" :key="idx">{{ opt }}: {{ tallies[idx] || 0 }} votes</li>
-      </ul>
-      <p>Winning Option: <strong>{{ winningOption }}</strong></p>
-      <canvas ref="chart" height="200"></canvas>
 
-      <div v-if="isAdmin" class="admin-actions">
-        <button v-if="state === 0" @click="activate">Activate</button>
-        <button v-if="state === 1" @click="end">End</button>
-        <button v-if="state === 2" @click="finalize">Finalize</button>
+      <div v-if="!address" class="picker-row">
+        <label>
+          <span>Poll</span>
+          <select class="input" v-model="selectedPollAddress" @change="handlePollChange">
+            <option disabled value="">Select a poll</option>
+            <option v-for="poll in polls" :key="poll" :value="poll">{{ poll }}</option>
+          </select>
+        </label>
       </div>
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
-    </div>
-    
-    <div v-if="proposals.length > 0" class="results-container">
-      <div class="results-section">
-        <label class="section-label">&gt; VOTE_COUNT:</label>
-        <div class="proposals-results">
-          <div 
-            v-for="(proposal, index) in proposals" 
-            :key="index"
-            class="result-item"
-          >
-            <div class="result-header">
-              <span class="result-index">[{{ String(index + 1).padStart(2, '0') }}]</span>
-              <span class="result-name">{{ web3 ? web3.utils.hexToUtf8(proposal.name) : '' }}</span>
+    </section>
+
+    <section v-if="selectedPollAddress" class="summary">
+      <div class="summary-text">
+        <h3>{{ title || shortAddress(selectedPollAddress) }}</h3>
+        <p v-if="description">{{ description }}</p>
+        <p v-if="!description" class="muted">No description provided.</p>
+      </div>
+      <div class="state">
+        <span class="state-chip" :class="stateClass">{{ stateLabel }}</span>
+        <span v-if="totalVotes >= 0" class="meta">{{ totalVotes }} vote{{ totalVotes === 1 ? '' : 's' }}</span>
+      </div>
+    </section>
+
+    <div v-if="selectedPollAddress" class="grid">
+      <section class="card tally-card">
+        <header>
+          <h4>Breakdown</h4>
+          <span v-if="winningOption" class="meta">In the lead: {{ winningOption }}</span>
+        </header>
+        <ul class="tally-list">
+          <li v-for="(option, index) in options" :key="option" class="tally-item">
+            <div>
+              <span class="option-name">{{ option }}</span>
+              <span class="option-count">{{ tallies[index] || 0 }} votes</span>
             </div>
-            <div class="result-votes">
-              <div class="vote-bar-container">
-                <div 
-                  class="vote-bar" 
-                  :style="{ width: getVotePercentage(proposal.voteCount) + '%' }"
-                ></div>
-              </div>
-              <span class="vote-count">{{ proposal.voteCount }} VOTES</span>
+            <div class="progress">
+              <div class="progress-bar" :style="{ width: optionPercentage(index) + '%' }"></div>
             </div>
-          </div>
+          </li>
+        </ul>
+      </section>
+
+      <section class="card chart-card">
+        <header>
+          <h4>Distribution</h4>
+        </header>
+        <canvas ref="chart" height="200"></canvas>
+        <div v-if="isAdmin" class="admin-actions">
+          <button v-if="state === 0" class="btn" type="button" @click="activate">Activate</button>
+          <button v-if="state === 1" class="btn" type="button" @click="end">End voting</button>
+          <button v-if="state === 2" class="btn" type="button" @click="finalize">Finalize</button>
         </div>
-      </div>
-      
-      <div class="winner-section">
-        <div class="winner-label">&gt; WINNING_PROPOSAL:</div>
-        <div class="winner-name">{{ winningProposalName }}</div>
-      </div>
+      </section>
     </div>
-    
-    <div v-else class="no-results">
-      <span>&gt; NO_RESULTS_AVAILABLE</span>
-      <p>Deploy a contract and cast votes first.</p>
-    </div>
+
+    <div v-else class="empty">Select a poll to view results.</div>
   </div>
 </template>
 
@@ -84,157 +73,141 @@ import { initWeb3, getAccounts, getDeployedAddress, getContract, subscribeToEven
 import PollFactoryArtifact from '../../../core/build/contracts/PollFactory.json'
 import PollArtifact from '../../../core/build/contracts/Poll.json'
 import { Chart, ArcElement, Tooltip, Legend } from 'chart.js'
+
 Chart.register(ArcElement, Tooltip, Legend)
+
+const STATE_LABELS = ['Draft', 'Active', 'Ended', 'Finalized']
 
 export default {
   name: 'ResultsDisplay',
-<<<<<<< HEAD
-  props: { address: { type: String, default: '' } },
-=======
-  computed: {
-    stateLabel() {
-      switch (this.state) {
-        case 0: return 'Draft'
-        case 1: return 'Active'
-        case 2: return 'Ended'
-        case 3: return 'Finalized'
-        default: return 'Unknown'
-      }
+  props: {
+    address: {
+      type: String,
+      default: '',
     },
-    stateClass() {
-      return {
-        draft: this.state === 0,
-        active: this.state === 1,
-        ended: this.state === 2,
-        finalized: this.state === 3
-      }
-    }
+    orgAddress: {
+      type: String,
+      default: '',
+    },
   },
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
+  emits: ['polls-updated'],
   data() {
     return {
-      orgAddress: '',
+      orgAddressInternal: '',
       polls: [],
       selectedPollAddress: '',
-      title: '',
+      poll: null,
       options: [],
       tallies: [],
-      winningOption: '',
-      factory: null,
-      poll: null,
-      chartInstance: null,
+      title: '',
+      description: '',
       state: 0,
+      totalVotes: 0,
+      winningOption: '',
       isAdmin: false,
-      refreshId: null,
-      eventSubs: []
+      chartInstance: null,
+      refreshInterval: null,
+      subscriptions: [],
+      factory: null,
     }
+  },
+  computed: {
+    stateLabel() {
+      return STATE_LABELS[this.state] || 'Unknown'
+    },
+    stateClass() {
+      switch (this.state) {
+        case 1:
+          return 'state-active'
+        case 2:
+          return 'state-ended'
+        case 3:
+          return 'state-finalized'
+        default:
+          return 'state-draft'
+      }
+    },
+  },
+  watch: {
+    address: {
+      immediate: true,
+      async handler(newAddress) {
+        if (newAddress) {
+          this.selectedPollAddress = newAddress
+          await this.loadResults()
+          this.$emit('polls-updated', [newAddress])
+        }
+      },
+    },
   },
   async mounted() {
     try {
       await initWeb3()
       const accounts = await getAccounts()
-      this.orgAddress = accounts[0]
-      const addr = await getDeployedAddress(PollFactoryArtifact)
-      this.factory = await getContract(PollFactoryArtifact, addr)
+      this.orgAddressInternal = this.orgAddress || accounts[0]
+      const factoryAddress = await getDeployedAddress(PollFactoryArtifact)
+      this.factory = await getContract(PollFactoryArtifact, factoryAddress)
       await this.loadOrgPolls()
+      if (!this.address && this.polls.length && !this.selectedPollAddress) {
+        this.selectedPollAddress = this.polls[this.polls.length - 1]
+        await this.loadResults()
+      }
     } catch (error) {
-      console.error('Error in mounted hook:', error)
+      console.error('Results display bootstrap failed', error)
     }
   },
   beforeUnmount() {
-    if (this.refreshId) clearInterval(this.refreshId)
-    this.teardownSubs()
+    this.teardown()
   },
   methods: {
-    teardownSubs() {
-      if (!this.eventSubs) return
-      try {
-<<<<<<< HEAD
-        if (window.ethereum) {
-          this.web3 = new Web3(window.ethereum)
-          try {
-            await window.ethereum.request({ method: 'eth_requestAccounts' })
-          } catch (error) {
-            console.error("User denied account access")
-            return
-          }
-        } else if (window.web3) {
-          this.web3 = new Web3(window.web3.currentProvider)
-        } else {
-          console.log('Non-Ethereum browser detected. Consider using MetaMask!')
-          return
-        }
-
-        const networkId = await this.web3.eth.net.getId()
-        const deployedNetwork = VoteContract.networks[networkId]
-        if (!deployedNetwork && !this.address) {
-          throw new Error('Contract not deployed on the current network')
-        }
-        const targetAddress = this.address && this.address.length > 0 ? this.address : deployedNetwork.address
-        this.contract = new this.web3.eth.Contract(
-          VoteContract.abi,
-          targetAddress
-        )
-      } catch (error) {
-        console.error('Failed to initialize Web3:', error)
-        alert('[ ERROR ] Failed to initialize Web3. Check network connection.')
-=======
-        this.eventSubs.forEach(s => { if (s && s.unsubscribe) s.unsubscribe() })
-      } catch (e) {}
-      this.eventSubs = []
-    },
     async loadOrgPolls() {
       try {
-        if (!this.factory) return
-        const list = await this.factory.methods.getOrgPolls(this.orgAddress).call()
+        if (!this.factory || !this.orgAddressInternal) return
+        const list = await this.factory.methods.getOrgPolls(this.orgAddressInternal).call()
         this.polls = list
-      } catch (e) {
-        console.error('Failed to load org polls', e)
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
+        this.$emit('polls-updated', list)
+      } catch (error) {
+        console.error('Failed to load organizer polls', error)
       }
     },
-    async onPollChange() {
-      if (this.refreshId) {
-        clearInterval(this.refreshId)
-        this.refreshId = null
-      }
-      this.teardownSubs()
+    async handlePollChange() {
       await this.loadResults()
-      this.refreshId = setInterval(() => {
-        this.loadResults(true)
-      }, 3000)
-
-      // Try event-driven updates if WS available
-      try {
-        const sub1 = subscribeToEventOptional(PollArtifact.abi, this.selectedPollAddress, 'Voted', () => this.loadResults(true))
-        const sub2 = subscribeToEventOptional(PollArtifact.abi, this.selectedPollAddress, 'StateChanged', () => this.loadResults(true))
-        this.eventSubs = [sub1, sub2].filter(Boolean)
-      } catch (e) {
-        // no-op; will keep polling
-      }
     },
-    async loadResults(isRefresh = false) {
+    optionPercentage(index) {
+      if (!this.totalVotes) return 0
+      return Math.round(((this.tallies[index] || 0) / this.totalVotes) * 100)
+    },
+    async loadResults() {
+      if (!this.selectedPollAddress) return
       try {
-        if (!this.selectedPollAddress) return
+        this.teardownSubscriptions()
         this.poll = await getContract(PollArtifact, this.selectedPollAddress)
-        const [opts, tallies, t, st, admin] = await Promise.all([
+        const [options, tallies, title, description, state, admin] = await Promise.all([
           this.poll.methods.getOptions().call(),
           this.poll.methods.getTallies().call(),
           this.poll.methods.title().call(),
+          this.poll.methods.description().call(),
           this.poll.methods.state().call(),
-          this.poll.methods.admin().call()
+          this.poll.methods.admin().call(),
         ])
-        this.options = opts
-        this.tallies = tallies.map(v => Number(v))
-        this.title = t
-        this.state = Number(st)
         const accounts = await getAccounts()
         this.isAdmin = accounts[0]?.toLowerCase() === admin.toLowerCase()
-        const maxIdx = this.tallies.reduce((best, v, i, arr) => v > arr[best] ? i : best, 0)
-        this.winningOption = this.options[maxIdx] || ''
+        this.options = options
+        this.tallies = tallies.map((value) => Number(value))
+        this.title = title
+        this.description = description
+        this.state = Number(state)
+        this.totalVotes = this.tallies.reduce((sum, value) => sum + value, 0)
+        const leaderIndex = this.tallies.reduce(
+          (bestIndex, value, currentIndex, array) => (value > array[bestIndex] ? currentIndex : bestIndex),
+          0
+        )
+        this.winningOption = options[leaderIndex] || ''
         this.renderChart()
-      } catch (e) {
-        console.error('Failed to load results', e)
+        this.setupRefresh()
+        this.setupSubscriptions()
+      } catch (error) {
+        console.error('Failed to load poll results', error)
       }
     },
     renderChart() {
@@ -242,240 +215,286 @@ export default {
       const ctx = this.$refs.chart.getContext('2d')
       const data = {
         labels: this.options,
-        datasets: [{
-          label: 'Votes',
-          data: this.tallies,
-          backgroundColor: ['#3498db','#2ecc71','#e67e22','#9b59b6','#e74c3c','#1abc9c','#f1c40f']
-        }]
+        datasets: [
+          {
+            label: 'Votes',
+            data: this.tallies,
+            backgroundColor: ['#111827', '#4b5563', '#6b7280', '#9ca3af', '#d1d5db', '#e5e7eb'],
+          },
+        ],
       }
       if (this.chartInstance) {
         this.chartInstance.data = data
         this.chartInstance.update()
         return
       }
-      this.chartInstance = new Chart(ctx, { type: 'doughnut', data })
+      this.chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data,
+        options: {
+          plugins: {
+            legend: {
+              position: 'bottom',
+            },
+          },
+        },
+      })
+    },
+    setupRefresh() {
+      if (this.refreshInterval) {
+        clearInterval(this.refreshInterval)
+      }
+      this.refreshInterval = setInterval(async () => {
+        try {
+          await this.loadResults()
+        } catch (error) {
+          console.warn('Refresh failed', error)
+        }
+      }, 4000)
+    },
+    setupSubscriptions() {
+      if (!this.poll || !this.selectedPollAddress) return
+      try {
+        const votedSub = subscribeToEventOptional(
+          PollArtifact.abi,
+          this.selectedPollAddress,
+          'Voted',
+          () => this.loadResults()
+        )
+        const stateSub = subscribeToEventOptional(
+          PollArtifact.abi,
+          this.selectedPollAddress,
+          'StateChanged',
+          () => this.loadResults()
+        )
+        this.subscriptions = [votedSub, stateSub].filter(Boolean)
+      } catch (error) {
+        console.warn('Realtime subscriptions unavailable', error)
+      }
     },
     async activate() {
       try {
-<<<<<<< HEAD
-        const proposalCount = await this.contract.methods.proposals.length().call()
-        this.proposals = []
-        for (let i = 0; i < proposalCount; i++) {
-          const proposal = await this.contract.methods.proposals(i).call()
-          this.proposals.push(proposal)
-        }
-
-        const winnerName = await this.contract.methods.winnerName().call()
-        this.winningProposalName = this.web3.utils.hexToUtf8(winnerName)
-      } catch (error) {
-        console.error('Error loading results:', error)
-        alert('[ ERROR ] Failed to load results')
-      }
-    },
-    getVotePercentage(voteCount) {
-      const total = this.proposals.reduce((sum, p) => sum + parseInt(p.voteCount), 0)
-      return total > 0 ? (parseInt(voteCount) / total) * 100 : 0
-=======
         const accounts = await getAccounts()
         await this.poll.methods.activate().send({ from: accounts[0] })
-        await this.loadResults(true)
-      } catch (e) { console.error(e) }
+        await this.loadResults()
+      } catch (error) {
+        console.error('Activate failed', error)
+      }
     },
     async end() {
       try {
         const accounts = await getAccounts()
         await this.poll.methods.end().send({ from: accounts[0] })
-        await this.loadResults(true)
-      } catch (e) { console.error(e) }
+        await this.loadResults()
+      } catch (error) {
+        console.error('End failed', error)
+      }
     },
     async finalize() {
       try {
         const accounts = await getAccounts()
         await this.poll.methods.finalize().send({ from: accounts[0] })
-        await this.loadResults(true)
-      } catch (e) { console.error(e) }
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
-    }
-  }
+        await this.loadResults()
+      } catch (error) {
+        console.error('Finalize failed', error)
+      }
+    },
+    teardown() {
+      if (this.refreshInterval) {
+        clearInterval(this.refreshInterval)
+        this.refreshInterval = null
+      }
+      this.teardownSubscriptions()
+    },
+    teardownSubscriptions() {
+      this.subscriptions.forEach((subscription) => {
+        if (subscription && typeof subscription.unsubscribe === 'function') {
+          try {
+            subscription.unsubscribe()
+          } catch (error) {
+            // ignore
+          }
+        }
+      })
+      this.subscriptions = []
+    },
+    shortAddress(address) {
+      return `${address.slice(0, 6)}…${address.slice(-4)}`
+    },
+  },
 }
 </script>
 
 <style scoped>
-<<<<<<< HEAD
-.results-display {
-  max-width: 800px;
-  margin: 0 auto;
+.results {
+  display: grid;
+  gap: 24px;
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
+.picker {
+  display: grid;
+  gap: 16px;
 }
 
-.section-header h2 {
-  color: var(--text-primary);
-  font-size: 1.5rem;
-  font-weight: bold;
-  letter-spacing: 0.1rem;
+.picker-row {
+  display: grid;
+  gap: 12px;
 }
 
-.status-indicator {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+@media (min-width: 760px) {
+  .picker-row {
+    grid-template-columns: 1fr auto;
+    align-items: end;
+  }
 }
 
-.results-container {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  padding: 2rem;
-}
-
-.results-section {
-  margin-bottom: 2rem;
-}
-
-.section-label {
+label > span {
   display: block;
-  color: var(--text-secondary);
-  margin-bottom: 1.5rem;
-  font-size: 0.9rem;
-  letter-spacing: 0.1rem;
-}
-
-.proposals-results {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.result-item {
-  padding: 1.5rem;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-}
-
-.result-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.result-index {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--text-muted);
-  font-size: 0.9rem;
-  min-width: 50px;
 }
 
-.result-name {
-  color: var(--text-primary);
-  font-size: 1rem;
-  flex: 1;
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
 }
 
-.result-votes {
+.summary-text h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+}
+
+.summary-text p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.summary-text .muted {
+  color: var(--text-muted);
+}
+
+.state {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 8px;
+  align-items: flex-end;
 }
 
-.vote-bar-container {
-  width: 100%;
-  height: 20px;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+.state-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.state-draft {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.state-active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.state-ended {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.state-finalized {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.grid {
+  display: grid;
+  gap: 24px;
+}
+
+@media (min-width: 960px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card {
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  display: grid;
+  gap: 16px;
+}
+
+.tally-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.tally-item {
+  display: grid;
+  gap: 8px;
+}
+
+.option-name {
+  font-weight: 600;
+}
+
+.option-count {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.progress {
   position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-muted);
   overflow: hidden;
 }
 
-.vote-bar {
-  height: 100%;
-  background-color: var(--accent);
-  transition: width 0.5s ease;
-  opacity: 0.3;
+.progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: #111827;
+  transition: width 0.3s ease;
 }
 
-.vote-count {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  text-align: right;
+.admin-actions {
+  display: flex;
+  gap: 12px;
 }
 
-.winner-section {
-  padding-top: 2rem;
-  border-top: 2px solid var(--border-color);
+.admin-actions .btn {
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
 }
 
-.winner-label {
-  color: var(--text-secondary);
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-  letter-spacing: 0.1rem;
-}
-
-.winner-name {
-  color: var(--text-primary);
-  font-size: 1.5rem;
-  padding: 1.5rem;
-  background-color: var(--bg-primary);
-  border: 2px solid var(--border-color);
-  text-align: center;
-  text-shadow: 0 0 10px var(--accent);
-  letter-spacing: 0.2rem;
-}
-
-.no-results {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  padding: 3rem 2rem;
-  text-align: center;
-}
-
-.no-results span {
-  display: block;
-  color: var(--text-secondary);
-  font-size: 1.2rem;
-  margin-bottom: 1rem;
-}
-
-.no-results p {
+.empty {
+  font-size: 13px;
   color: var(--text-muted);
-  font-size: 0.9rem;
 }
-
-@media (max-width: 768px) {
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-  
-  .results-container {
-    padding: 1rem;
-  }
-  
-  .result-item {
-    padding: 1rem;
-  }
-  
-  .winner-name {
-    font-size: 1.2rem;
-    padding: 1rem;
-  }
-}
-=======
-.selector { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
-input, select { padding: 0.4rem; }
-.header-row { display: flex; align-items: center; gap: 0.5rem; }
-.badge { padding: 0.2rem 0.5rem; border-radius: 8px; font-size: 0.8rem; color: white; }
-.badge.draft { background: #7f8c8d; }
-.badge.active { background: #2ecc71; }
-.badge.ended { background: #e67e22; }
-.badge.finalized { background: #9b59b6; }
-.admin-actions { margin-top: 0.75rem; display: flex; gap: 0.5rem; }
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
 </style>

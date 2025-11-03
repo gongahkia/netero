@@ -33,411 +33,456 @@
         </div>
       </div>
       
-      <button 
-        type="submit" 
-        :disabled="selectedProposal === null"
-        class="btn-primary"
-        :class="{ 'btn-disabled': selectedProposal === null }"
-      >
-        [ SUBMIT_VOTE ]
-      </button>
-      
-      <div v-if="voteConfirmation" class="vote-confirmation">
-        <div class="confirmation-label">&gt; VOTE_CONFIRMED:</div>
-        <div class="confirmation-text">{{ voteConfirmation }}</div>
-      </div>
-=======
-    <h2>Cast Your Vote</h2>
+      <template>
+        <div class="voting">
+          <section class="poll-picker">
+            <div class="picker-grid">
+              <label>
+                <span>Organizer</span>
+                <input v-model="orgAddress" class="input" placeholder="0x..." />
+              </label>
+              <button class="btn btn-ghost" type="button" @click="loadOrgPolls">
+                Refresh
+              </button>
+            </div>
 
-    <div class="selector">
-      <label>Org (defaults to your address):</label>
-      <input v-model="orgAddress" placeholder="0x..." />
-      <button @click="loadOrgPolls">Load Polls</button>
-    </div>
+            <div v-if="!address" class="picker-grid poll-select">
+              <label>
+                <span>Poll</span>
+                <select class="input" v-model="selectedPollAddress" @change="handlePollChange">
+                  <option disabled value="">Select a poll</option>
+                  <option v-for="poll in polls" :key="poll" :value="poll">{{ poll }}</option>
+                </select>
+              </label>
+            </div>
 
-    <div class="selector" v-if="polls.length">
-      <label>Select Poll:</label>
-      <select v-model="selectedPollAddress" @change="loadPoll">
-        <option disabled value="">-- choose a poll --</option>
-        <option v-for="addr in polls" :key="addr" :value="addr">{{ addr }}</option>
-      </select>
-    </div>
+            <div v-else class="preselected">
+              <span>Using preselected poll</span>
+              <code>{{ address }}</code>
+            </div>
+          </section>
 
-    <div v-if="stateLabel" class="state-row">
-      <span class="badge" :class="stateClass">{{ stateLabel }}</span>
-    </div>
+          <div v-if="selectedPollAddress" class="poll-state">
+            <span class="state-chip" :class="stateClass">{{ stateLabel }}</span>
+            <span v-if="startTime" class="meta">Opens {{ formatTime(startTime * 1000) }}</span>
+            <span v-if="endTime" class="meta">Closes {{ formatTime(endTime * 1000) }}</span>
+            <span v-if="timerCopy" class="countdown">{{ timerCopy }}</span>
+          </div>
 
-    <form v-if="options.length" @submit.prevent="castVote">
-      <div v-for="(opt, index) in options" :key="index">
-        <input type="radio" :id="'proposal-' + index" :value="index" v-model.number="selectedProposal" />
-        <label :for="'proposal-' + index">{{ opt }}</label>
-      </div>
-      <button type="submit" :disabled="selectedProposal === null || !selectedPollAddress">Cast Vote</button>
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
-    </form>
-  </div>
-  
-</template>
+          <p v-if="status" class="status-message" :class="status.type">{{ status.message }}</p>
 
-<script>
-import { initWeb3, getAccounts, getDeployedAddress, getContract, subscribeToEventOptional } from '../eth'
-import PollFactoryArtifact from '../../../core/build/contracts/PollFactory.json'
-import PollArtifact from '../../../core/build/contracts/Poll.json'
+          <form v-if="options.length" class="ballot" @submit.prevent="castVote">
+            <div class="options">
+              <label v-for="(option, index) in options" :key="index" class="option">
+                <input type="radio" :value="index" v-model.number="selectedOption" />
+                <span>{{ option }}</span>
+              </label>
+            </div>
+            <button class="btn btn-primary" type="submit" :disabled="!canVote || submitting">
+              {{ submitting ? 'Submitting…' : 'Cast vote' }}
+            </button>
+          </form>
 
-export default {
-  name: 'VotingInterface',
-<<<<<<< HEAD
-  props: {
-    address: { type: String, default: '' }
-=======
-  computed: {
-    stateLabel() {
-      switch (this.state) {
-        case 0: return 'Draft'
-        case 1: return 'Active'
-        case 2: return 'Ended'
-        case 3: return 'Finalized'
-        default: return ''
-      }
-    },
-    stateClass() {
-      return {
-        draft: this.state === 0,
-        active: this.state === 1,
-        ended: this.state === 2,
-        finalized: this.state === 3
-      }
-    }
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
-  },
-  data() {
-    return {
-      orgAddress: '',
-      polls: [],
-      selectedPollAddress: '',
-      options: [],
-      selectedProposal: null,
-<<<<<<< HEAD
-      web3: null,
-      contract: null,
-      voteConfirmation: null
-=======
-      factory: null,
-      poll: null,
-      state: null,
-      stateSub: null
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
-    }
-  },
-  async mounted() {
-    try {
-      await initWeb3()
-      const accounts = await getAccounts()
-      this.orgAddress = accounts[0]
-      const addr = await getDeployedAddress(PollFactoryArtifact)
-      this.factory = await getContract(PollFactoryArtifact, addr)
-      await this.loadOrgPolls()
-    } catch (error) {
-      console.error('Error in mounted hook:', error)
-    }
-  },
-  beforeUnmount() {
-    if (this.stateSub && this.stateSub.unsubscribe) {
-      try { this.stateSub.unsubscribe() } catch (e) {}
-    }
-  },
-  methods: {
-    async loadOrgPolls() {
-      try {
-<<<<<<< HEAD
-        if (window.ethereum) {
-          this.web3 = new Web3(window.ethereum)
-          try {
-            await window.ethereum.request({ method: 'eth_requestAccounts' })
-          } catch (error) {
-            console.error("User denied account access")
-            return
+          <div v-else-if="selectedPollAddress" class="empty">No options found for this poll.</div>
+
+          <div v-if="showAutoClose" class="autoclose">
+            <p>The voting window elapsed. Sync the contract state to prevent further votes.</p>
+            <button class="btn" type="button" @click="triggerAutoClose" :disabled="autoClosing">
+              {{ autoClosing ? 'Syncing…' : 'Close voting window' }}
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <script>
+      import { initWeb3, getAccounts, getDeployedAddress, getContract, subscribeToEventOptional } from '../eth'
+      import PollFactoryArtifact from '../../../core/build/contracts/PollFactory.json'
+      import PollArtifact from '../../../core/build/contracts/Poll.json'
+
+      const STATE_LABELS = ['Draft', 'Active', 'Ended', 'Finalized']
+
+      export default {
+        name: 'VotingInterface',
+        props: {
+          address: {
+            type: String,
+            default: '',
+          },
+        },
+        emits: ['polls-updated'],
+        data() {
+          return {
+            orgAddress: '',
+            polls: [],
+            selectedPollAddress: '',
+            poll: null,
+            options: [],
+            selectedOption: null,
+            state: null,
+            startTime: 0,
+            endTime: 0,
+            remainingSeconds: -1,
+            countdownTimer: null,
+            submitting: false,
+            status: null,
+            autoClosing: false,
+            factory: null,
+            stateSubscription: null,
+            voteSubscription: null,
           }
-        } else if (window.web3) {
-          this.web3 = new Web3(window.web3.currentProvider)
-        } else {
-          console.log('Non-Ethereum browser detected. Consider using MetaMask!')
-          return
-        }
-
-        const networkId = await this.web3.eth.net.getId()
-        const deployedNetwork = VoteContract.networks[networkId]
-        if (!deployedNetwork && !this.address) {
-          throw new Error('Contract not deployed on the current network')
-        }
-        const targetAddress = this.address && this.address.length > 0 ? this.address : deployedNetwork.address
-        this.contract = new this.web3.eth.Contract(
-          VoteContract.abi,
-          targetAddress
-        )
-      } catch (error) {
-        console.error('Failed to initialize Web3:', error)
-        alert('[ ERROR ] Failed to initialize Web3. Check network connection.')
-=======
-        if (!this.factory) return
-        const list = await this.factory.methods.getOrgPolls(this.orgAddress).call()
-        this.polls = list
-      } catch (e) {
-        console.error('Failed to load org polls', e)
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
-      }
-    },
-    async loadPoll() {
-      try {
-        if (!this.selectedPollAddress) return
-        this.poll = await getContract(PollArtifact, this.selectedPollAddress)
-        if (this.stateSub && this.stateSub.unsubscribe) {
-          try { this.stateSub.unsubscribe() } catch (e) {}
-          this.stateSub = null
-        }
-<<<<<<< HEAD
-      } catch (error) {
-        console.error('Error loading proposals:', error)
-        alert('[ ERROR ] Failed to load proposals')
-      }
-    },
-    async castVote() {
-      if (!this.web3 || !this.contract) {
-        alert('[ ERROR ] Web3 not initialized. Check MetaMask connection.')
-        return
-      }
-      try {
-        const accounts = await this.web3.eth.getAccounts()
-        await this.contract.methods.vote(this.selectedProposal).send({ from: accounts[0] })
-        const proposalName = this.web3.utils.hexToUtf8(this.proposals[this.selectedProposal].name)
-        this.voteConfirmation = `Voted for: ${proposalName}`
-        alert('[ SUCCESS ] Vote cast successfully!')
-        this.selectedProposal = null 
-      } catch (error) {
-        console.error('Error casting vote:', error)
-        alert('[ ERROR ] Failed to cast vote: ' + error.message)
-=======
-        const [opts, st] = await Promise.all([
-          this.poll.methods.getOptions().call(),
-          this.poll.methods.state().call()
-        ])
-        this.options = opts
-        this.selectedProposal = null
-        this.state = Number(st)
-
-        // Subscribe to state changes if WS is available
-        try {
-          this.stateSub = subscribeToEventOptional(PollArtifact.abi, this.selectedPollAddress, 'StateChanged', async () => {
+        },
+        computed: {
+          stateLabel() {
+            return STATE_LABELS[this.state] || 'Unknown'
+          },
+          stateClass() {
+            switch (this.state) {
+              case 1:
+                return 'state-active'
+              case 2:
+                return 'state-ended'
+              case 3:
+                return 'state-finalized'
+              default:
+                return 'state-draft'
+            }
+          },
+          canVote() {
+            if (this.state !== 1) return false
+            if (this.startTime && Date.now() < this.startTime * 1000) return false
+            if (this.endTime && Date.now() > this.endTime * 1000) return false
+            return this.selectedOption !== null && this.selectedPollAddress
+          },
+          timerCopy() {
+            if (!this.endTime) return ''
+            const seconds = this.remainingSeconds
+            if (seconds <= 0) return 'Voting window elapsed'
+            const h = Math.floor(seconds / 3600)
+            const m = Math.floor((seconds % 3600) / 60)
+            const s = seconds % 60
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s
+              .toString()
+              .padStart(2, '0')}`
+          },
+          showAutoClose() {
+            return this.state === 1 && this.endTime && this.remainingSeconds <= 0
+          },
+        },
+        watch: {
+          address: {
+            immediate: true,
+            handler(newAddress) {
+              if (newAddress) {
+                this.selectedPollAddress = newAddress
+                this.loadPoll()
+                this.$emit('polls-updated', [newAddress])
+              }
+            },
+          },
+        },
+        async mounted() {
+          try {
+            await initWeb3()
+            const accounts = await getAccounts()
+            this.orgAddress = accounts[0]
+            const factoryAddress = await getDeployedAddress(PollFactoryArtifact)
+            this.factory = await getContract(PollFactoryArtifact, factoryAddress)
+            await this.loadOrgPolls()
+            if (!this.address && this.polls.length && !this.selectedPollAddress) {
+              this.selectedPollAddress = this.polls[this.polls.length - 1]
+              await this.loadPoll()
+            }
+          } catch (error) {
+            console.error('Voting interface bootstrap failed', error)
+          }
+        },
+        beforeUnmount() {
+          this.teardown()
+        },
+        methods: {
+          async loadOrgPolls() {
             try {
-              const s = await this.poll.methods.state().call()
-              this.state = Number(s)
-            } catch (e) {}
-          })
-        } catch (e) {}
-      } catch (e) {
-        console.error('Failed to load poll', e)
+              if (!this.factory || !this.orgAddress) return
+              const list = await this.factory.methods.getOrgPolls(this.orgAddress).call()
+              this.polls = list
+              this.$emit('polls-updated', list)
+            } catch (error) {
+              console.error('Unable to load polls', error)
+            }
+          },
+          async handlePollChange() {
+            await this.loadPoll()
+          },
+          async loadPoll() {
+            if (!this.selectedPollAddress) return
+            try {
+              this.teardownSubscriptions()
+              this.poll = await getContract(PollArtifact, this.selectedPollAddress)
+              const [options, state, startTime, endTime] = await Promise.all([
+                this.poll.methods.getOptions().call(),
+                this.poll.methods.state().call(),
+                this.poll.methods.startTime().call(),
+                this.poll.methods.endTime().call(),
+              ])
+              this.options = options
+              this.state = Number(state)
+              this.startTime = Number(startTime)
+              this.endTime = Number(endTime)
+              this.selectedOption = null
+              this.status = null
+              this.startCountdown()
+              this.setupSubscriptions()
+            } catch (error) {
+              console.error('Failed to load poll', error)
+              this.status = { type: 'error', message: 'Unable to load poll details' }
+            }
+          },
+          startCountdown() {
+            if (this.countdownTimer) {
+              clearInterval(this.countdownTimer)
+              this.countdownTimer = null
+            }
+            if (!this.endTime) {
+              this.remainingSeconds = -1
+              return
+            }
+            const update = () => {
+              this.remainingSeconds = Math.floor(this.endTime - Date.now() / 1000)
+            }
+            update()
+            this.countdownTimer = setInterval(update, 1000)
+          },
+          async castVote() {
+            if (!this.poll || this.selectedOption === null) return
+            try {
+              this.submitting = true
+              const accounts = await getAccounts()
+              await this.poll.methods.vote(this.selectedOption).send({ from: accounts[0] })
+              this.status = { type: 'success', message: 'Vote submitted successfully' }
+              this.selectedOption = null
+            } catch (error) {
+              console.error('Failed to cast vote', error)
+              const message = error?.message || 'Unable to cast vote'
+              this.status = { type: 'error', message }
+            } finally {
+              this.submitting = false
+            }
+          },
+          async triggerAutoClose() {
+            if (!this.poll) return
+            try {
+              this.autoClosing = true
+              const accounts = await getAccounts()
+              await this.poll.methods.autoCloseIfExpired().send({ from: accounts[0] })
+              await this.loadPoll()
+              this.status = { type: 'success', message: 'Voting window closed' }
+            } catch (error) {
+              console.error('Auto-close failed', error)
+              this.status = { type: 'error', message: error?.message || 'Unable to close poll' }
+            } finally {
+              this.autoClosing = false
+            }
+          },
+          setupSubscriptions() {
+            if (!this.poll || !this.selectedPollAddress) return
+            try {
+              this.stateSubscription = subscribeToEventOptional(
+                PollArtifact.abi,
+                this.selectedPollAddress,
+                'StateChanged',
+                async () => {
+                  try {
+                    const state = await this.poll.methods.state().call()
+                    this.state = Number(state)
+                  } catch (error) {
+                    console.error('Failed to refresh state', error)
+                  }
+                }
+              )
+              this.voteSubscription = subscribeToEventOptional(
+                PollArtifact.abi,
+                this.selectedPollAddress,
+                'Voted',
+                () => {
+                  if (!this.status || this.status.type !== 'success') return
+                  this.status = { type: 'success', message: 'Vote submitted successfully' }
+                }
+              )
+            } catch (error) {
+              console.warn('Event subscriptions unavailable', error)
+            }
+          },
+          teardown() {
+            if (this.countdownTimer) {
+              clearInterval(this.countdownTimer)
+              this.countdownTimer = null
+            }
+            this.teardownSubscriptions()
+          },
+          teardownSubscriptions() {
+            const subs = [this.stateSubscription, this.voteSubscription]
+            subs.forEach((sub) => {
+              if (sub && typeof sub.unsubscribe === 'function') {
+                try {
+                  sub.unsubscribe()
+                } catch (error) {
+                  // ignore
+                }
+              }
+            })
+            this.stateSubscription = null
+            this.voteSubscription = null
+          },
+          formatTime(timestamp) {
+            const date = new Date(Number(timestamp))
+            return date.toLocaleString()
+          },
+        },
       }
-    },
-    async castVote() {
-      if (!this.poll) {
-        alert('Select a poll first.')
-        return
+      </script>
+
+      <style scoped>
+      .voting {
+        display: grid;
+        gap: 24px;
       }
-      try {
-        const accounts = await getAccounts()
-        await this.poll.methods.vote(this.selectedProposal).send({ from: accounts[0] })
-        alert('Vote cast successfully!')
-        this.selectedProposal = null
-      } catch (error) {
-        console.error('Error casting vote:', error)
-        alert('Failed to cast vote. You may not be allowlisted or have already voted.')
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
+
+      .poll-picker {
+        display: grid;
+        gap: 16px;
       }
-    }
-  }
-}
-</script>
 
-<style scoped>
-<<<<<<< HEAD
-.voting-interface {
-  max-width: 800px;
-  margin: 0 auto;
-}
+      .picker-grid {
+        display: grid;
+        gap: 12px;
+      }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
-}
+      @media (min-width: 720px) {
+        .picker-grid {
+          grid-template-columns: 1fr auto;
+          align-items: end;
+        }
+      }
 
-.section-header h2 {
-  color: var(--text-primary);
-  font-size: 1.5rem;
-  font-weight: bold;
-  letter-spacing: 0.1rem;
-}
+      label > span {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
 
-.status-indicator {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
+      .poll-state {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        font-size: 13px;
+        color: var(--text-secondary);
+      }
 
-.vote-form {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  padding: 2rem;
-}
+      .state-chip {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
 
-.proposals-list {
-  margin-bottom: 2rem;
-}
+      .state-draft {
+        background: #f3f4f6;
+        color: #1f2937;
+      }
 
-.section-label {
-  display: block;
-  color: var(--text-secondary);
-  margin-bottom: 1.5rem;
-  font-size: 0.9rem;
-  letter-spacing: 0.1rem;
-}
+      .state-active {
+        background: #dcfce7;
+        color: #166534;
+      }
 
-.proposal-option {
-  display: flex;
-  align-items: center;
-  padding: 1rem;
-  margin-bottom: 0.5rem;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
+      .state-ended {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
 
-.proposal-option:hover {
-  background-color: var(--bg-muted);
-  border-color: var(--text-primary);
-}
+      .state-finalized {
+        background: #e0e7ff;
+        color: #3730a3;
+      }
 
-.radio-input {
-  margin-right: 1rem;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--border-color);
-  background-color: var(--bg-primary);
-  cursor: pointer;
-  position: relative;
-}
+      .countdown {
+        font-weight: 600;
+        color: var(--text-primary);
+      }
 
-.radio-input:checked::before {
-  content: '■';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: var(--text-primary);
-  font-size: 12px;
-}
+      .ballot {
+        display: grid;
+        gap: 20px;
+      }
 
-.proposal-label {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  cursor: pointer;
-  color: var(--text-primary);
-}
+      .options {
+        display: grid;
+        gap: 12px;
+      }
 
-.proposal-index {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  min-width: 50px;
-}
+      .option {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg-muted);
+      }
 
-.proposal-name {
-  color: var(--text-primary);
-  font-size: 0.95rem;
-}
+      .option:hover {
+        border-color: var(--border-strong);
+      }
 
-.no-proposals {
-  color: var(--text-muted);
-  padding: 2rem;
-  text-align: center;
-  font-size: 0.9rem;
-}
+      .empty {
+        font-size: 13px;
+        color: var(--text-muted);
+      }
 
-.btn-primary {
-  width: 100%;
-  background-color: var(--bg-primary);
-  border: 2px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 1rem 1.5rem;
-  font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
-  font-size: 0.9rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  letter-spacing: 0.05rem;
-}
+      .status-message {
+        font-size: 13px;
+        margin: 0;
+      }
 
-.btn-primary:hover:not(.btn-disabled) {
-  background-color: var(--accent-hover);
-  border-color: var(--accent-hover);
-  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.25);
-}
+      .status-message.success {
+        color: #166534;
+      }
 
-.btn-disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
+      .status-message.error {
+        color: #b91c1c;
+      }
 
-.vote-confirmation {
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid var(--border-color);
-}
+      .autoclose {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg-muted);
+        font-size: 13px;
+      }
 
-.confirmation-label {
-  color: var(--text-secondary);
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-}
+      .preselected {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg-muted);
+        font-size: 13px;
+      }
 
-.confirmation-text {
-  color: var(--text-primary);
-  padding: 1rem;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-}
-
-@media (max-width: 768px) {
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-  
-  .vote-form {
-    padding: 1rem;
-  }
-  
-  .proposal-label {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-}
-</style>
-=======
-.selector { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
-input, select { padding: 0.4rem; }
-.state-row { margin-bottom: 0.5rem; }
-.badge { padding: 0.2rem 0.5rem; border-radius: 8px; font-size: 0.8rem; color: white; }
-.badge.draft { background: #7f8c8d; }
-.badge.active { background: #2ecc71; }
-.badge.ended { background: #e67e22; }
-.badge.finalized { background: #9b59b6; }
-</style>
->>>>>>> 4101ed0d25cc66c54228e09b78b052e0c78bf190
+      .meta {
+        color: var(--text-muted);
+      }
+      </style>

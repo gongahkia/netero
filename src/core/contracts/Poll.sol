@@ -72,6 +72,7 @@ contract Poll {
     }
 
     function setSchedule(uint64 _startTime, uint64 _endTime) external onlyAdmin {
+        _maybeAutoClose();
         require(state == State.Draft || state == State.Active, "Locked");
         require(_endTime == 0 || _endTime > _startTime, "Bad window");
         startTime = _startTime;
@@ -84,12 +85,14 @@ contract Poll {
     }
 
     function activate() external onlyAdmin {
+        _maybeAutoClose();
         require(state == State.Draft, "Not draft");
         state = State.Active;
         emit StateChanged(State.Draft, State.Active);
     }
 
     function end() external onlyAdmin {
+        _maybeAutoClose();
         require(state == State.Active, "Not active");
         state = State.Ended;
         emit StateChanged(State.Active, State.Ended);
@@ -103,6 +106,7 @@ contract Poll {
 
     // Voting
     function vote(uint256 optionIndex) external {
+        _maybeAutoClose();
         require(state == State.Active, "Not active");
         if (startTime != 0) require(block.timestamp >= startTime, "Too early");
         if (endTime != 0) require(block.timestamp <= endTime, "Too late");
@@ -122,4 +126,22 @@ contract Poll {
     function optionCount() external view returns (uint256) { return _options.length; }
     function getOptions() external view returns (string[] memory) { return _options; }
     function getTallies() external view returns (uint256[] memory) { return _tallies; }
+
+    function remainingSeconds() external view returns (int64) {
+        if (endTime == 0) return int64(-1);
+        int256 diff = int256(uint256(endTime)) - int256(uint256(block.timestamp));
+        return int64(diff);
+    }
+
+    function autoCloseIfExpired() external {
+        _maybeAutoClose();
+    }
+
+    function _maybeAutoClose() internal {
+        if (state == State.Active && endTime != 0 && block.timestamp > endTime) {
+            State previous = state;
+            state = State.Ended;
+            emit StateChanged(previous, State.Ended);
+        }
+    }
 }

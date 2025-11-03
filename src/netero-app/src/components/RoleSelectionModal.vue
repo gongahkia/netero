@@ -1,38 +1,36 @@
 <template>
-  <div class="modal-overlay" v-if="show">
+  <div v-if="show" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
-        <h1>// NETERO_VOTING_SYSTEM</h1>
-        <p class="subtitle">Select your role to continue</p>
+        <h1>Welcome to Netero</h1>
+        <p>Choose how you'd like to participate. You can switch any time.</p>
       </div>
 
-      <div class="role-selection">
-        <button class="role-btn" @click="selectRole('organization')">
-          <div class="role-icon">[ ORG ]</div>
-          <h2>Organization</h2>
-          <p class="role-description">
-            Create ballots, deploy voting contracts,
-            register members, and manage elections
+      <div class="role-grid">
+        <button type="button" class="role-card" @click="selectRole('organization')">
+          <div class="role-heading">
+            <span class="role-title">Organizer</span>
+            <span class="role-chip">Manage ballots</span>
+          </div>
+          <p>
+            Publish proposals, configure timelines, coordinate voter access, and follow results in real time.
           </p>
-          <div class="role-action">[ SELECT_ORGANIZER ]</div>
         </button>
 
-        <button class="role-btn" @click="selectRole('member')">
-          <div class="role-icon">[ MEM ]</div>
-          <h2>Member</h2>
-          <p class="role-description">
-            Connect to voting contracts, cast votes
-            on proposals, and view election results
+        <button type="button" class="role-card" @click="selectRole('member')">
+          <div class="role-heading">
+            <span class="role-title">Member</span>
+            <span class="role-chip">Cast votes</span>
+          </div>
+          <p>
+            Connect your wallet, review proposals assigned to you, and vote with confidence on each decision.
           </p>
-          <div class="role-action">[ SELECT_MEMBER ]</div>
         </button>
       </div>
 
-      <div class="modal-footer">
-        <p class="info-text">
-          // This selection will reset when you refresh the page
-        </p>
-      </div>
+      <footer class="modal-footer">
+        <small>Switch roles later from the navigation bar.</small>
+      </footer>
     </div>
   </div>
 </template>
@@ -61,7 +59,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.95);
+  background: rgba(17, 24, 39, 0.84);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -71,11 +69,11 @@ export default {
 
 .modal-card {
   background: var(--bg-surface);
-  border: 2px solid var(--text-primary);
-  max-width: 900px;
+  border-radius: 16px;
+  max-width: 720px;
   width: 100%;
-  padding: 48px 32px;
-  font-family: 'JetBrains Mono', monospace;
+  padding: 48px 40px;
+  box-shadow: 0 24px 64px rgba(17, 24, 39, 0.25);
 }
 
 .modal-header {
@@ -85,107 +83,79 @@ export default {
 
 .modal-header h1 {
   font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
   margin: 0 0 12px 0;
-  letter-spacing: 1px;
+  font-weight: 700;
 }
 
-.subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
+.modal-header p {
   margin: 0;
+  color: var(--text-secondary);
 }
 
-.role-selection {
+.role-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
   margin-bottom: 32px;
 }
 
-.role-btn {
-  background: var(--bg-surface);
-  border: 2px solid var(--border);
-  padding: 32px 24px;
+
+.role-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  text-align: left;
+  background: var(--bg-muted);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
-  font-family: 'JetBrains Mono', monospace;
 }
 
-.role-btn:hover {
-  border-color: var(--text-primary);
-  background: var(--text-primary);
-  color: var(--bg-surface);
-  transform: translateY(-2px);
-}
-
-.role-btn:hover .role-icon,
-.role-btn:hover h2,
-.role-btn:hover .role-description,
-.role-btn:hover .role-action {
-  color: var(--bg-surface);
-}
-
-.role-btn:active {
-  transform: translateY(0);
-}
-
-.role-icon {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 16px;
-  letter-spacing: 2px;
-}
-
-.role-btn h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 12px 0;
-}
-
-.role-description {
-  font-size: 13px;
-  line-height: 1.6;
+.role-card p {
+  margin: 12px 0 0 0;
   color: var(--text-secondary);
-  margin: 0 0 24px 0;
-  min-height: 60px;
+  line-height: 1.6;
+  font-size: 14px;
 }
 
-.role-action {
-  font-size: 12px;
+.role-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+  background: var(--bg-surface);
+}
+
+.role-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.role-title {
+  font-size: 18px;
   font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: 1px;
+}
+
+.role-chip {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
 }
 
 .modal-footer {
   text-align: center;
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
-}
-
-.info-text {
-  font-size: 12px;
   color: var(--text-muted);
-  margin: 0;
-  font-style: italic;
 }
 
 @media (max-width: 768px) {
-  .role-selection {
+  .role-grid {
     grid-template-columns: 1fr;
   }
 
   .modal-card {
-    padding: 32px 24px;
-  }
-
-  .modal-header h1 {
-    font-size: 22px;
+    padding: 32px 28px;
   }
 }
 </style>

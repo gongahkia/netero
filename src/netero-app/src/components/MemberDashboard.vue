@@ -1,82 +1,77 @@
 <template>
-  <div class="container stack-lg">
-    <header class="stack">
-      <h1>// MEMBER_DASHBOARD</h1>
-      <p class="subtitle">Cast your vote on active proposals</p>
-
+  <div class="dashboard container">
+    <header class="page-header">
+      <div>
+        <h1>Member workspace</h1>
+        <p>Review proposals, cast your vote, and stay informed as results update live.</p>
+      </div>
       <WalletConnection />
-
-      <div class="instructions-card card stack">
-        <span class="section-title">// SETUP_INSTRUCTIONS</span>
-        <div class="instruction-steps">
-          <div class="step">
-            <span class="step-number">01.</span>
-            <div class="step-content">
-              <strong>Install MetaMask browser extension</strong>
-              <p>Download from metamask.io and add to your browser</p>
-            </div>
-          </div>
-          <div class="step">
-            <span class="step-number">02.</span>
-            <div class="step-content">
-              <strong>Configure local network in MetaMask</strong>
-              <p>Network Name: Localhost 8545</p>
-              <p>RPC URL: http://localhost:8545</p>
-              <p>Chain ID: 1337</p>
-              <p>Currency: ETH</p>
-            </div>
-          </div>
-          <div class="step">
-            <span class="step-number">03.</span>
-            <div class="step-content">
-              <strong>Share your wallet address with organizer</strong>
-              <p>Copy your address from MetaMask and request voting rights</p>
-            </div>
-          </div>
-          <div class="step">
-            <span class="step-number">04.</span>
-            <div class="step-content">
-              <strong>Enter contract address below (if provided)</strong>
-              <p>Optional: For targeting specific ballots</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card contract-section stack">
-        <span class="section-title">// CONTRACT_ADDRESS</span>
-        <input
-          v-model="contractAddress"
-          @change="persistAddress"
-          class="input"
-          placeholder="0x... (optional - leave empty for default contract)"
-        />
-        <div class="button-group">
-          <button class="btn btn-primary" @click="persistAddress" :disabled="!contractAddress">
-            [ SAVE_ADDRESS ]
-          </button>
-          <button class="btn" @click="clearAddress" :disabled="!stored">
-            [ CLEAR ]
-          </button>
-        </div>
-        <small class="status-text" v-if="stored">✓ Address saved in browser</small>
-      </div>
     </header>
 
-    <section class="stack-lg">
-      <div class="stack">
-        <span class="section-title">// CAST_VOTE</span>
-        <div class="card voting-section">
-          <VotingInterface :address="contractAddress || undefined" />
+    <section class="card current-ballot">
+      <div class="card-header">
+        <div>
+          <h2>Active ballot</h2>
+          <p>Paste the poll address shared by your organizer. We'll remember it for you.</p>
         </div>
+        <div class="status-pill" :class="stored ? 'status-pill--saved' : 'status-pill--blank'">
+          {{ stored ? 'Saved locally' : 'Not saved' }}
+        </div>
+      </div>
+      <div class="address-row">
+        <input
+          v-model.trim="contractAddress"
+          class="input"
+          placeholder="0x... poll address"
+        />
+        <button class="btn btn-primary" type="button" @click="persistAddress" :disabled="!contractAddress">
+          Save
+        </button>
+        <button class="btn btn-ghost" type="button" @click="clearAddress" :disabled="!stored">
+          Clear
+        </button>
+      </div>
+      <ul class="helper-list">
+        <li>Make sure you're allowlisted before voting.</li>
+        <li>We'll prompt you automatically if the poll closes while you're on this page.</li>
+      </ul>
+    </section>
+
+    <section class="grid-two">
+      <div class="card">
+        <header class="section-head">
+          <div>
+            <h3>Cast your vote</h3>
+            <p>Select a ballot and submit your choice with a single transaction.</p>
+          </div>
+        </header>
+        <VotingInterface
+          :address="contractAddress || undefined"
+          @polls-updated="handlePollsUpdated"
+        />
       </div>
 
-      <div class="stack">
-        <span class="section-title">// LIVE_RESULTS</span>
-        <div class="card results-section">
-          <ResultsDisplay :address="contractAddress || undefined" />
-        </div>
+      <div class="card">
+        <header class="section-head">
+          <div>
+            <h3>Live results</h3>
+            <p>Follow turnout and see which option is in the lead in real time.</p>
+          </div>
+        </header>
+        <ResultsDisplay :address="contractAddress || undefined" />
       </div>
+    </section>
+
+    <NotificationPanel :poll-addresses="activePolls" role="member" />
+
+    <section class="card analytics-section">
+      <header class="section-head">
+        <div>
+          <h3>Analytics</h3>
+          <p>Understand voter engagement and turnout trends for the selected ballot.</p>
+        </div>
+      </header>
+      <Analytics :focus-poll="primaryPoll" compact />
     </section>
   </div>
 </template>
@@ -85,112 +80,196 @@
 import VotingInterface from './VotingInterface.vue'
 import ResultsDisplay from './ResultsDisplay.vue'
 import WalletConnection from './WalletConnection.vue'
+import NotificationPanel from './NotificationPanel.vue'
+import Analytics from './Analytics.vue'
+
+const STORAGE_KEY = 'netero.contract'
 
 export default {
   name: 'MemberDashboard',
-  components: { VotingInterface, ResultsDisplay, WalletConnection },
-  data(){
-    return { contractAddress: localStorage.getItem('netero.contract') || '', stored: !!localStorage.getItem('netero.contract') }
+  components: {
+    VotingInterface,
+    ResultsDisplay,
+    WalletConnection,
+    NotificationPanel,
+    Analytics,
   },
-  methods:{
-    persistAddress(){
-      if(this.contractAddress){
-        localStorage.setItem('netero.contract', this.contractAddress)
-        this.stored = true
-      }
+  data() {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : ''
+    return {
+      contractAddress: saved || '',
+      stored: Boolean(saved),
+      discoveredPolls: [],
+    }
+  },
+  computed: {
+    activePolls() {
+      const fromAddress = this.contractAddress ? [this.contractAddress] : []
+      const combined = new Set([...fromAddress, ...this.discoveredPolls])
+      return Array.from(combined).filter(Boolean)
     },
-    clearAddress(){
-      localStorage.removeItem('netero.contract')
+    primaryPoll() {
+      return this.activePolls[0] || ''
+    },
+  },
+  methods: {
+    persistAddress() {
+      if (!this.contractAddress) return
+      try {
+        localStorage.setItem(STORAGE_KEY, this.contractAddress)
+        this.stored = true
+      } catch (e) {
+        // no-op if storage unavailable
+      }
+      this.handlePollsUpdated([this.contractAddress])
+    },
+    clearAddress() {
+      try {
+        localStorage.removeItem(STORAGE_KEY)
+      } catch (e) {
+        // ignore
+      }
       this.contractAddress = ''
       this.stored = false
-    }
-  }
+      this.discoveredPolls = []
+    },
+    handlePollsUpdated(addresses = []) {
+      const cleaned = (addresses || []).filter(Boolean)
+      if (!cleaned.length) return
+      this.discoveredPolls = Array.from(new Set([...this.discoveredPolls, ...cleaned]))
+    },
+  },
 }
 </script>
 
 <style scoped>
-h1 {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-
-.subtitle {
-  color: var(--text-secondary);
-  margin: 8px 0 0 0;
-  font-size: 14px;
-}
-
-.instructions-card {
-  padding: 24px;
-  margin-top: 24px;
-}
-
-.instruction-steps {
+.dashboard {
   display: grid;
-  gap: 20px;
-  margin-top: 16px;
+  gap: 32px;
 }
 
-.step {
+.page-header {
   display: flex;
-  gap: 16px;
+  justify-content: space-between;
   align-items: flex-start;
+  gap: 24px;
 }
 
-.step-number {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary);
-  min-width: 40px;
+.page-header h1 {
+  margin: 0 0 12px 0;
+  font-size: 28px;
 }
 
-.step-content {
-  flex: 1;
+.page-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  max-width: 420px;
 }
 
-.step-content strong {
-  display: block;
-  color: var(--text-primary);
-  margin-bottom: 6px;
+.current-ballot {
+  padding: 28px;
+  display: grid;
+  gap: 24px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.card-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+}
+
+.card-header p {
+  margin: 0;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
-.step-content p {
-  margin: 4px 0;
-  color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1.5;
+.status-pill {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-.contract-section {
-  padding: 20px;
-  margin-top: 16px;
+.status-pill--saved {
+  background: #dcfce7;
+  color: #166534;
 }
 
-.button-group {
-  display: flex;
+.status-pill--blank {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+}
+
+.address-row {
+  display: grid;
   gap: 12px;
 }
 
-.status-text {
+.address-row .btn {
+  width: 100%;
+}
+
+@media (min-width: 780px) {
+  .address-row {
+    grid-template-columns: 1fr auto auto;
+  }
+  .address-row .btn {
+    width: auto;
+  }
+}
+
+.helper-list {
+  margin: 0;
+  padding-left: 18px;
   color: var(--text-muted);
-  font-size: 12px;
-  margin-top: 8px;
-  display: block;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
-.voting-section,
-.results-section {
-  padding: 20px;
+.grid-two {
+  display: grid;
+  gap: 32px;
 }
 
-.section-title {
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  margin-bottom: 12px;
-  display: block;
+@media (min-width: 1000px) {
+  .grid-two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.section-head h3 {
+  margin: 0 0 6px 0;
+  font-size: 18px;
+}
+
+.section-head p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.analytics-section {
+  padding: 28px;
+}
+
+@media (max-width: 820px) {
+  .page-header {
+    flex-direction: column;
+  }
 }
 </style>
