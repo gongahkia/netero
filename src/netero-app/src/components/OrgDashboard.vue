@@ -78,7 +78,7 @@
             <p>Pull subgraph insights to measure engagement across your ballots.</p>
           </div>
         </header>
-        <Analytics :org-address="orgAddress" :focus-poll="primaryPoll" />
+        <AnalyticsPanel :org-address="orgAddress" :focus-poll="primaryPoll" />
       </div>
     </section>
   </div>
@@ -90,7 +90,7 @@ import VoterRegistration from './VoterRegistration.vue'
 import ResultsDisplay from './ResultsDisplay.vue'
 import WalletConnection from './WalletConnection.vue'
 import NotificationPanel from './NotificationPanel.vue'
-import Analytics from './Analytics.vue'
+import AnalyticsPanel from './Analytics.vue'
 import { initWeb3, getAccounts, getDeployedAddress, getContract } from '../eth'
 import PollFactoryArtifact from '../../../core/build/contracts/PollFactory.json'
 
@@ -102,7 +102,7 @@ export default {
     ResultsDisplay,
     WalletConnection,
     NotificationPanel,
-    Analytics,
+    AnalyticsPanel,
   },
   data() {
     return {

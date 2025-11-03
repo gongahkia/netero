@@ -5,7 +5,7 @@ import './styles/theme.css'
 
 import OrgDashboard from './components/OrgDashboard.vue'
 import MemberDashboard from './components/MemberDashboard.vue'
-import Analytics from './components/Analytics.vue'
+import AnalyticsPanel from './components/Analytics.vue'
 import VoterRegistration from './components/VoterRegistration.vue'
 import BallotCreation from './components/BallotCreation.vue'
 import VotingInterface from './components/VotingInterface.vue'
@@ -15,6 +15,7 @@ const routes = [
   { path: '/', redirect: '/member' },
   { path: '/member', component: MemberDashboard },
   { path: '/org', component: OrgDashboard },
+  { path: '/analytics', component: AnalyticsPanel },
   // direct access routes for deep links
   { path: '/register', component: VoterRegistration },
   { path: '/create-ballot', component: BallotCreation },

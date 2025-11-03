@@ -336,9 +336,6 @@ export default {
       const date = new Date(Number(timestamp))
       return date.toLocaleString()
     },
-    shortAddress(value) {
-      return value ? `${value.slice(0, 6)}…${value.slice(-4)}` : ''
-    },
   },
 }
 </script>

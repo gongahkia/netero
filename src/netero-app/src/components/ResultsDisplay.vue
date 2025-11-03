@@ -270,7 +270,19 @@ export default {
       }
       this.refreshInterval = setInterval(async () => {
         try {
-          await this.loadResults()
+          if (!this.poll) return
+          const tallies = await this.poll.methods.getTallies().call()
+          this.tallies = tallies.map((value) => Number(value))
+          this.totalVotes = this.tallies.reduce((sum, value) => sum + value, 0)
+          const leaderIndex = this.tallies.reduce(
+            (bestIndex, value, currentIndex, array) => (value > array[bestIndex] ? currentIndex : bestIndex),
+            0
+          )
+          this.winningOption = this.options[leaderIndex] || ''
+          if (this.chartInstance) {
+            this.chartInstance.data.datasets[0].data = this.tallies
+            this.chartInstance.update()
+          }
         } catch (error) {
           console.warn('Refresh failed', error)
         }

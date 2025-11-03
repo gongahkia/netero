@@ -71,7 +71,7 @@
           <p>Understand voter engagement and turnout trends for the selected ballot.</p>
         </div>
       </header>
-      <Analytics :focus-poll="primaryPoll" compact />
+      <AnalyticsPanel :focus-poll="primaryPoll" compact />
     </section>
   </div>
 </template>
@@ -81,7 +81,7 @@ import VotingInterface from './VotingInterface.vue'
 import ResultsDisplay from './ResultsDisplay.vue'
 import WalletConnection from './WalletConnection.vue'
 import NotificationPanel from './NotificationPanel.vue'
-import Analytics from './Analytics.vue'
+import AnalyticsPanel from './Analytics.vue'
 
 const STORAGE_KEY = 'netero.contract'
 
@@ -92,7 +92,7 @@ export default {
     ResultsDisplay,
     WalletConnection,
     NotificationPanel,
-    Analytics,
+    AnalyticsPanel,
   },
   data() {
     const saved = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : ''
