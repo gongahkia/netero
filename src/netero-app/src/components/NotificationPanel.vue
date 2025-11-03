@@ -1,5 +1,5 @@
 <template>
-  <section class="notification-panel card">
+  <aside class="notification-sidebar" aria-live="polite">
     <header class="panel-header">
       <div>
         <h2>Live Notifications</h2>
@@ -17,79 +17,27 @@
       </button>
     </header>
 
-    <div class="panel-grid">
-      <div class="watchlist">
-        <div class="section-heading">
-          <span class="section-title">Watchlist</span>
-          <span class="section-helper">We'll notify you when these wallets cast a ballot.</span>
-        </div>
-
-        <form class="watchlist-form" @submit.prevent="handleAddWatcher">
-          <div class="fields">
-            <input
-              class="input"
-              v-model.trim="form.address"
-              placeholder="Wallet address (0x...)"
-              autocomplete="off"
-            />
-            <input
-              class="input"
-              v-model.trim="form.label"
-              placeholder="Label (optional)"
-              autocomplete="off"
-            />
+    <div class="activity">
+      <div class="section-heading">
+        <span class="section-title">Activity Feed</span>
+        <span class="section-helper">Most recent votes from your watchlist.</span>
+      </div>
+      <ul class="activity-feed" v-if="notifications.length">
+        <li v-for="note in notifications" :key="note.id" class="activity-row">
+          <div class="activity-main">
+            <div class="activity-title">
+              {{ note.label || formatAddress(note.voter) }} voted
+            </div>
+            <div class="activity-meta">
+              {{ formatTime(note.timestamp) }} • Poll {{ shortAddress(note.poll) }}
+            </div>
           </div>
-          <button class="btn btn-primary" type="submit">Add address</button>
-        </form>
-        <p v-if="error" class="form-error">{{ error }}</p>
-
-        <ul class="watchers" v-if="watchlist.length">
-          <li v-for="item in watchlist" :key="item.address" class="watcher-row">
-            <div>
-              <div class="watcher-label">{{ item.label || formatAddress(item.address) }}</div>
-              <div class="watcher-address">{{ item.address }}</div>
-            </div>
-            <div class="watcher-meta">
-              <span
-                v-if="statusByAddress[item.address]"
-                class="status-chip"
-                :class="statusVariant(statusByAddress[item.address])"
-              >
-                {{ statusLabel(statusByAddress[item.address]) }}
-              </span>
-              <button class="btn btn-ghost" type="button" @click="removeWatcher(item.address)">
-                Remove
-              </button>
-            </div>
-          </li>
-        </ul>
-        <p v-else class="empty-hint">
-          Add a wallet to start receiving live notifications for the ballots you monitor.
-        </p>
-      </div>
-
-      <div class="activity">
-        <div class="section-heading">
-          <span class="section-title">Activity Feed</span>
-          <span class="section-helper">Most recent votes from your watchlist.</span>
-        </div>
-        <ul class="activity-feed" v-if="notifications.length">
-          <li v-for="note in notifications" :key="note.id" class="activity-row">
-            <div class="activity-main">
-              <div class="activity-title">
-                {{ note.label || formatAddress(note.voter) }} voted
-              </div>
-              <div class="activity-meta">
-                {{ formatTime(note.timestamp) }} • Poll {{ shortAddress(note.poll) }}
-              </div>
-            </div>
-            <span class="activity-pill">Option {{ Number(note.optionIndex) + 1 }}</span>
-          </li>
-        </ul>
-        <p v-else class="empty-hint">No live updates yet. Votes will appear here instantly.</p>
-      </div>
+          <span class="activity-pill">Option {{ Number(note.optionIndex) + 1 }}</span>
+        </li>
+      </ul>
+      <p v-else class="empty-hint">No live updates yet. Votes will appear here instantly.</p>
     </div>
-  </section>
+  </aside>
 </template>
 
 <script setup>
@@ -310,10 +258,19 @@ function clearTracking() {
 </script>
 
 <style scoped>
-.notification-panel {
-  display: grid;
-  gap: 24px;
-  padding: 28px;
+/* Right-hand sidebar that floats over content on wide screens */
+.notification-sidebar {
+  position: fixed;
+  right: 0;
+  top: 64px; /* below header */
+  bottom: 0;
+  width: 340px;
+  padding: 16px 16px 24px;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  overflow-y: auto;
+  z-index: 15;
 }
 
 .panel-header {
@@ -334,16 +291,7 @@ function clearTracking() {
   font-size: 14px;
 }
 
-.panel-grid {
-  display: grid;
-  gap: 32px;
-}
-
-@media (min-width: 900px) {
-  .panel-grid {
-    grid-template-columns: 1.1fr 0.9fr;
-  }
-}
+/* Remove original grid since sidebar is single-column */
 
 .section-heading {
   display: flex;
@@ -357,22 +305,8 @@ function clearTracking() {
   font-size: 13px;
 }
 
-.watchlist-form {
-  display: grid;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.watchlist-form .fields {
-  display: grid;
-  gap: 12px;
-}
-
-@media (min-width: 720px) {
-  .watchlist-form .fields {
-    grid-template-columns: 1fr 0.7fr;
-  }
-}
+/* Optional: hide watchlist UI in sidebar for a lean feed-only look */
+.watchlist, .watchlist-form, .watchers { display: none; }
 
 .form-error {
   color: #d14343;
@@ -497,5 +431,11 @@ function clearTracking() {
   margin: 12px 0 0;
   color: var(--text-muted);
   font-size: 13px;
+}
+
+@media (max-width: 960px) {
+  .notification-sidebar {
+    display: none; /* hide on small screens to keep space */
+  }
 }
 </style>
