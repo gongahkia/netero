@@ -4,7 +4,7 @@
       <div class="picker-row">
         <label>
           <span>Organizer</span>
-          <input v-model="orgAddress" class="input" placeholder="0x..." />
+          <input v-model="orgAddressInternal" class="input" placeholder="0x..." />
         </label>
         <button class="btn btn-ghost" type="button" @click="loadOrgPolls">Refresh</button>
       </div>
@@ -113,14 +113,6 @@ export default {
     }
   },
   computed: {
-    orgAddress: {
-      get() {
-        return this.orgAddressInternal
-      },
-      set(value) {
-        this.orgAddressInternal = value
-      },
-    },
     stateLabel() {
       return STATE_LABELS[this.state] || 'Unknown'
     },
@@ -145,6 +137,15 @@ export default {
           this.selectedPollAddress = newAddress
           await this.loadResults()
           this.$emit('polls-updated', [newAddress])
+        }
+      },
+    },
+    orgAddress: {
+      immediate: true,
+      async handler(newOrg) {
+        if (newOrg) {
+          this.orgAddressInternal = newOrg
+          await this.loadOrgPolls()
         }
       },
     },
@@ -173,14 +174,21 @@ export default {
       try {
         if (!this.factory || !this.orgAddressInternal) return
         const list = await this.factory.methods.getOrgPolls(this.orgAddressInternal).call()
+        const previousSelection = this.selectedPollAddress
+        let selectionChanged = false
         this.polls = list
         if (!this.address && list.length && !list.includes(this.selectedPollAddress)) {
           this.selectedPollAddress = list[list.length - 1]
+          selectionChanged = true
         }
         if (!this.address && !list.length) {
           this.selectedPollAddress = ''
+          selectionChanged = previousSelection !== ''
         }
         this.$emit('polls-updated', list)
+        if (selectionChanged && this.selectedPollAddress) {
+          await this.loadResults()
+        }
       } catch (error) {
         console.error('Failed to load organizer polls', error)
       }
@@ -195,6 +203,7 @@ export default {
     async loadResults() {
       if (!this.selectedPollAddress) return
       try {
+        await initWeb3()
         this.teardownSubscriptions()
         this.poll = await getContract(PollArtifact, this.selectedPollAddress)
         const [options, tallies, title, description, state, admin] = await Promise.all([
