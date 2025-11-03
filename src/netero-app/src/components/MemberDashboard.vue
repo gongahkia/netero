@@ -71,7 +71,6 @@ import VotingInterface from './VotingInterface.vue'
 import ResultsDisplay from './ResultsDisplay.vue'
 import WalletConnection from './WalletConnection.vue'
 import NotificationPanel from './NotificationPanel.vue'
-import AnalyticsPanel from './Analytics.vue'
 
 const STORAGE_KEY = 'netero.contract'
 
@@ -82,7 +81,6 @@ export default {
     ResultsDisplay,
     WalletConnection,
     NotificationPanel,
-    AnalyticsPanel,
   },
   data() {
     const saved = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : ''
