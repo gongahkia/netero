@@ -60,6 +60,10 @@ fi
 print_status "Starting Netero..."
 echo ""
 
+# Ensure log directory is available before redirecting
+LOG_DIR="logs"
+mkdir -p "$LOG_DIR"
+
 # Step 1: Install dependencies if needed
 if [ ! -d "src/netero-app/node_modules" ]; then
     print_status "Installing frontend dependencies..."
@@ -85,7 +89,7 @@ fi
 # Step 2: Start Ganache in the background
 print_status "Starting Ganache (local blockchain)..."
 cd src/core
-npx ganache --server.port 8545 --chain.chainId 1337 > ../../logs/ganache.log 2>&1 &
+npx ganache --server.port 8545 --chain.chainId 1337 > ../../$LOG_DIR/ganache.log 2>&1 &
 GANACHE_PID=$!
 cd ../..
 
@@ -104,7 +108,7 @@ fi
 # Step 3: Deploy smart contracts
 print_status "Deploying smart contracts with Truffle..."
 cd src/core
-npx truffle migrate --network development > ../../logs/truffle.log 2>&1
+npx truffle migrate --network development > ../../$LOG_DIR/truffle.log 2>&1
 MIGRATE_STATUS=$?
 cd ../..
 
@@ -119,7 +123,7 @@ fi
 # Step 4: Start Vue.js frontend
 print_status "Starting Vue.js frontend..."
 cd src/netero-app
-npm run serve > ../../logs/vue.log 2>&1 &
+npm run serve > ../../$LOG_DIR/vue.log 2>&1 &
 VUE_PID=$!
 cd ../..
 
@@ -148,4 +152,4 @@ print_status "Press Ctrl+C to stop all services"
 echo ""
 
 # Keep the script running and show logs
-tail -f logs/vue.log
+tail -f "$LOG_DIR/vue.log"
