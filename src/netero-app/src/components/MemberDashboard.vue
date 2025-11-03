@@ -63,16 +63,6 @@
     </section>
 
     <NotificationPanel :poll-addresses="activePolls" role="member" />
-
-    <section class="card analytics-section">
-      <header class="section-head">
-        <div>
-          <h3>Analytics</h3>
-          <p>Understand voter engagement and turnout trends for the selected ballot.</p>
-        </div>
-      </header>
-      <AnalyticsPanel :focus-poll="primaryPoll" compact />
-    </section>
   </div>
 </template>
 

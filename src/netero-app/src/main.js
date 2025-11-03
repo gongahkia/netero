@@ -5,17 +5,16 @@ import './styles/theme.css'
 
 import OrgDashboard from './components/OrgDashboard.vue'
 import MemberDashboard from './components/MemberDashboard.vue'
-import AnalyticsPanel from './components/Analytics.vue'
 import VoterRegistration from './components/VoterRegistration.vue'
 import BallotCreation from './components/BallotCreation.vue'
 import VotingInterface from './components/VotingInterface.vue'
 import ResultsDisplay from './components/ResultsDisplay.vue'
 
+// Minimal routes; analytics page removed (embedded within Organizer)
 const routes = [
-  { path: '/', redirect: '/member' },
+  { path: '/', component: { template: '<div />' } },
   { path: '/member', component: MemberDashboard },
   { path: '/org', component: OrgDashboard },
-  { path: '/analytics', component: AnalyticsPanel },
   // direct access routes for deep links
   { path: '/register', component: VoterRegistration },
   { path: '/create-ballot', component: BallotCreation },

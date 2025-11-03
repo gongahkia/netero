@@ -8,14 +8,11 @@
           <span class="brand">Netero</span>
           <span class="tagline">Trusted decisions, transparently tallied.</span>
         </div>
-        <nav class="nav-links">
-          <router-link to="/member" class="nav-link">Member</router-link>
-          <router-link to="/org" class="nav-link">Organizer</router-link>
-          <router-link to="/analytics" class="nav-link">Analytics</router-link>
-        </nav>
+        <div class="spacer"></div>
         <div class="role-controls">
-          <span class="role-chip">{{ roleLabel }}</span>
-          <button class="btn btn-ghost" type="button" @click="switchRole">Switch role</button>
+          <button class="role-chip as-button" type="button" @click="switchRole">
+            {{ roleLabel }}
+          </button>
         </div>
       </div>
     </header>
@@ -87,12 +84,14 @@ export default {
       this.navigateForRole(role)
     },
     switchRole() {
+      // Clear role and return to root to show the role selection modal
       this.userRole = null
       try {
         localStorage.removeItem(ROLE_KEY)
       } catch (e) {
         // ignore persistence errors
       }
+      if (this.$route.path !== '/') this.$router.push('/')
     },
     navigateForRole(role) {
       if (role === 'organization') {
@@ -140,25 +139,7 @@ export default {
   color: var(--text-muted);
 }
 
-.nav-links {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-}
-
-.nav-link {
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 14px;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-}
-
-.nav-link.router-link-active {
-  background: var(--bg-muted);
-  color: var(--text-primary);
-  font-weight: 600;
-}
+.spacer { flex: 1; }
 
 .role-controls {
   display: flex;
@@ -175,6 +156,12 @@ export default {
   letter-spacing: 0.03em;
 }
 
+.role-chip.as-button {
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.role-chip.as-button:hover { background: var(--bg-secondary); }
+
 .btn-ghost {
   border: none;
   background: transparent;
@@ -190,6 +177,8 @@ export default {
 
 .app-main {
   padding: 32px 0 48px;
+  /* leave space for the right notifications sidebar on wide screens */
+  padding-right: 360px;
 }
 
 .app-footer {
@@ -221,12 +210,10 @@ export default {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  .nav-links {
-    justify-content: flex-start;
-  }
   .role-controls {
     justify-content: flex-start;
   }
+  .app-main { padding-right: 0; }
   .footer-row {
     flex-direction: column;
     align-items: flex-start;
