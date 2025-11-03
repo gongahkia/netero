@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, reactive, ref, watch, defineProps } from 'vue'
+import { computed, onBeforeUnmount, ref, watch, defineProps } from 'vue'
 import PollArtifact from '../../../core/build/contracts/Poll.json'
 import { getContract, subscribeToEventOptional } from '../eth'
 import { useNotificationStore } from '../store/notifications'
@@ -58,16 +58,12 @@ const props = defineProps({
 })
 
 const store = useNotificationStore()
-const form = reactive({ address: '', label: '' })
-const error = ref('')
-const statusByAddress = ref({})
 const pollContracts = ref([])
-let refreshTimer = null
 let subscriptions = []
-const voteCache = reactive({})
+const voteCache = {}
 
 const watchlist = computed(() => store.state.watchlist)
-const notifications = computed(() => store.state.notifications.slice(0, 12))
+const notifications = computed(() => store.state.notifications.slice(0, 25))
 
 const pollSignature = computed(() =>
   props.pollAddresses
@@ -105,48 +101,12 @@ function formatTime(timestamp) {
   return date.toLocaleString()
 }
 
-function statusVariant(summary) {
-  if (!summary) return ''
-  if (summary.total === 0) return 'status-idle'
-  if (summary.voted === 0) return 'status-pending'
-  if (summary.voted === summary.total) return 'status-complete'
-  return 'status-inprogress'
-}
-
-function statusLabel(summary) {
-  if (!summary || summary.total === 0) return 'No open polls'
-  if (summary.voted === 0) return 'Waiting'
-  if (summary.voted === summary.total) return 'All votes in'
-  return `${summary.voted} of ${summary.total} voted`
-}
-
 function keyFor(poll, address) {
   return `${poll.toLowerCase()}-${address.toLowerCase()}`
 }
 
 function handleClear() {
   store.clearNotifications()
-}
-
-async function handleAddWatcher() {
-  error.value = ''
-  if (!form.address) {
-    error.value = 'Enter a wallet address'
-    return
-  }
-  try {
-    store.addWatcher({ address: form.address, label: form.label })
-    form.address = ''
-    form.label = ''
-    await refreshStatuses(true)
-  } catch (err) {
-    error.value = err?.message || 'Could not add address'
-  }
-}
-
-function removeWatcher(address) {
-  store.removeWatcher(address)
-  refreshStatuses(true)
 }
 
 function handleVote(pollAddress, voter, optionIndex) {
@@ -165,7 +125,6 @@ function handleVote(pollAddress, voter, optionIndex) {
       role: props.role
     })
   }
-  refreshStatuses(false)
 }
 
 async function initialiseTracking() {
@@ -186,7 +145,6 @@ async function initialiseTracking() {
   }
   pollContracts.value = contracts
   if (!contracts.length) return
-  await refreshStatuses(true)
   subscriptions = contracts
     .map(({ address }) =>
       subscribeToEventOptional(PollArtifact.abi, address, 'Voted', (event) => {
@@ -196,53 +154,9 @@ async function initialiseTracking() {
       })
     )
     .filter(Boolean)
-  refreshTimer = setInterval(() => {
-    refreshStatuses(false)
-  }, 15000)
-}
-
-async function refreshStatuses(force = false) {
-  if (!pollContracts.value.length || !watchlist.value.length) {
-    statusByAddress.value = {}
-    return
-  }
-  const totals = pollContracts.value.length
-  const summary = {}
-  for (const watcher of watchlist.value) {
-    summary[watcher.address.toLowerCase()] = { voted: 0, total: totals }
-  }
-  for (const { address: pollAddress, contract } of pollContracts.value) {
-    const tasks = watchlist.value.map(async (watcher) => {
-      const normalised = watcher.address.toLowerCase()
-      const key = keyFor(pollAddress, normalised)
-      let has = voteCache[key]
-      if (force || has === undefined) {
-        try {
-          has = await contract.methods.hasVoted(watcher.address).call()
-        } catch (e) {
-          has = false
-        }
-        if (has) voteCache[key] = true
-      }
-      if (has) {
-        summary[normalised].voted += 1
-      }
-    })
-    await Promise.all(tasks)
-  }
-  const display = {}
-  for (const watcher of watchlist.value) {
-    const normalised = watcher.address.toLowerCase()
-    display[watcher.address] = summary[normalised]
-  }
-  statusByAddress.value = display
 }
 
 function clearTracking() {
-  if (refreshTimer) {
-    clearInterval(refreshTimer)
-    refreshTimer = null
-  }
   subscriptions.forEach((sub) => {
     if (sub && typeof sub.unsubscribe === 'function') {
       try {
