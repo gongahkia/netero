@@ -38,7 +38,8 @@
           <h4>Breakdown</h4>
           <span v-if="winningOption" class="meta">In the lead: {{ winningOption }}</span>
         </header>
-        <ul class="tally-list">
+        <p v-if="!options.length" class="placeholder">No options configured for this poll yet.</p>
+        <ul v-else class="tally-list">
           <li v-for="(option, index) in options" :key="option" class="tally-item">
             <div>
               <span class="option-name">{{ option }}</span>
@@ -112,6 +113,14 @@ export default {
     }
   },
   computed: {
+    orgAddress: {
+      get() {
+        return this.orgAddressInternal
+      },
+      set(value) {
+        this.orgAddressInternal = value
+      },
+    },
     stateLabel() {
       return STATE_LABELS[this.state] || 'Unknown'
     },
@@ -305,6 +314,10 @@ export default {
         this.refreshInterval = null
       }
       this.teardownSubscriptions()
+      if (this.chartInstance) {
+        this.chartInstance.destroy()
+        this.chartInstance = null
+      }
     },
     teardownSubscriptions() {
       this.subscriptions.forEach((subscription) => {
@@ -472,6 +485,12 @@ label > span {
   overflow: hidden;
 }
 
+}
+
+.placeholder {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
 .progress-bar {
   position: absolute;
   top: 0;
