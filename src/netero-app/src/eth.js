@@ -1,7 +1,6 @@
 import Web3 from 'web3'
 
 let web3Instance = null
-let providerChecked = false
 
 export function hasInjectedProvider() {
   return typeof window !== 'undefined' && (window.ethereum || window.web3)
@@ -13,7 +12,6 @@ export async function initWeb3() {
   if (web3Instance) return web3Instance
 
   if (hasInjectedProvider()) {
-    providerChecked = true
     if (window.ethereum) {
       web3Instance = new Web3(window.ethereum)
       try {
@@ -26,7 +24,6 @@ export async function initWeb3() {
       web3Instance = new Web3(window.web3.currentProvider)
     }
   } else {
-    providerChecked = true
     // No provider available; return null to avoid runtime overlay errors.
     web3Instance = null
   }
