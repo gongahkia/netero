@@ -174,6 +174,12 @@ export default {
         if (!this.factory || !this.orgAddressInternal) return
         const list = await this.factory.methods.getOrgPolls(this.orgAddressInternal).call()
         this.polls = list
+        if (!this.address && list.length && !list.includes(this.selectedPollAddress)) {
+          this.selectedPollAddress = list[list.length - 1]
+        }
+        if (!this.address && !list.length) {
+          this.selectedPollAddress = ''
+        }
         this.$emit('polls-updated', list)
       } catch (error) {
         console.error('Failed to load organizer polls', error)
