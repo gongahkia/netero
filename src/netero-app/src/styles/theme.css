@@ -57,6 +57,13 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
+  padding: 24px; /* ensure consistent inner spacing across panels */
+}
+
+/* Normalize vertical rhythm inside cards */
+.card .section-head + *,
+.card > * + * {
+  margin-top: 16px;
 }
 
 .btn {
@@ -102,6 +109,12 @@ body {
 .input:focus {
   border-color: var(--text-primary);
   box-shadow: 0 0 0 4px rgba(17, 24, 39, 0.08);
+}
+
+/* Tweak labels and small captions for tighter, consistent spacing */
+label > span,
+.section-title {
+  margin-bottom: 6px;
 }
 
 .section-title {

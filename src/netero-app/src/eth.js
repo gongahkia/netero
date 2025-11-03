@@ -1,39 +1,70 @@
 import Web3 from 'web3'
 
 let web3Instance = null
+let providerChecked = false
 
+export function hasInjectedProvider() {
+  return typeof window !== 'undefined' && (window.ethereum || window.web3)
+}
+
+// Initialize Web3 only if a provider exists. Never throw here —
+// callers should handle a null return value gracefully.
 export async function initWeb3() {
   if (web3Instance) return web3Instance
-  if (window.ethereum) {
-    web3Instance = new Web3(window.ethereum)
-    await window.ethereum.request({ method: 'eth_requestAccounts' })
-  } else if (window.web3) {
-    web3Instance = new Web3(window.web3.currentProvider)
+
+  if (hasInjectedProvider()) {
+    providerChecked = true
+    if (window.ethereum) {
+      web3Instance = new Web3(window.ethereum)
+      try {
+        await window.ethereum.request({ method: 'eth_requestAccounts' })
+      } catch (e) {
+        // User rejected or request failed — keep instance so read calls still work
+        console.warn('eth_requestAccounts was not granted', e)
+      }
+    } else if (window.web3) {
+      web3Instance = new Web3(window.web3.currentProvider)
+    }
   } else {
-    throw new Error('No Ethereum provider detected. Install MetaMask.')
+    providerChecked = true
+    // No provider available; return null to avoid runtime overlay errors.
+    web3Instance = null
   }
   return web3Instance
 }
 
 export async function getAccounts() {
   const web3 = await initWeb3()
-  return web3.eth.getAccounts()
+  if (!web3) return []
+  try {
+    return await web3.eth.getAccounts()
+  } catch (e) {
+    console.warn('getAccounts failed', e)
+    return []
+  }
 }
 
 export async function getNetworkId() {
   const web3 = await initWeb3()
-  return web3.eth.net.getId()
+  if (!web3) return null
+  try {
+    return await web3.eth.net.getId()
+  } catch (e) {
+    console.warn('getNetworkId failed', e)
+    return null
+  }
 }
 
 export async function getDeployedAddress(artifact) {
   const networkId = await getNetworkId()
+  if (!networkId) return null
   const deployed = artifact.networks?.[networkId]
-  if (!deployed) throw new Error('Contract not deployed on current network')
-  return deployed.address
+  return deployed ? deployed.address : null
 }
 
 export async function getContract(artifact, address) {
   const web3 = await initWeb3()
+  if (!web3 || !artifact?.abi || !address) return null
   return new web3.eth.Contract(artifact.abi, address)
 }
 

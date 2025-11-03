@@ -82,14 +82,16 @@ export default {
 }
 
 .modal-header h1 {
-  font-size: 28px;
+  font-size: 32px;
   margin: 0 0 12px 0;
   font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .modal-header p {
   margin: 0;
   color: var(--text-secondary);
+  font-size: 14px;
 }
 
 .role-grid {
@@ -147,6 +149,7 @@ export default {
 .modal-footer {
   text-align: center;
   color: var(--text-muted);
+  font-size: 13px;
 }
 
 @media (max-width: 768px) {
