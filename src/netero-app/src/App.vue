@@ -179,6 +179,7 @@ export default {
   border: none;
   background: transparent;
   color: var(--text-secondary);
+  font-family: var(--font-mono);
   padding: 6px 10px;
 }
 

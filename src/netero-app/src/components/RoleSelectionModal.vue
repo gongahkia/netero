@@ -74,6 +74,7 @@ export default {
   width: 100%;
   padding: 48px 40px;
   box-shadow: 0 24px 64px rgba(17, 24, 39, 0.25);
+  font-family: var(--font-mono);
 }
 
 .modal-header {

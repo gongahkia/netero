@@ -46,6 +46,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Ensure all interactive controls use the mono stack as well */
+button, input, select, textarea {
+  font-family: var(--font-mono);
+}
+
 .container {
   max-width: 1100px;
   margin: 0 auto;
@@ -76,6 +81,7 @@ body {
   border: 1px solid var(--border);
   background: var(--bg-surface);
   color: var(--text-primary);
+  font-family: var(--font-mono);
   cursor: pointer;
   transition: box-shadow .2s ease, transform .05s ease, border-color .2s ease;
 }
@@ -103,6 +109,7 @@ body {
   border-radius: var(--radius-sm);
   background: var(--bg-surface);
   color: var(--text-primary);
+  font-family: var(--font-mono);
   outline: none;
   transition: border-color .2s ease, box-shadow .2s ease;
 }
