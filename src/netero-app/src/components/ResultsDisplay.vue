@@ -500,12 +500,6 @@ label > span {
   overflow: hidden;
 }
 
-}
-
-.placeholder {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: var(--text-muted);
 .progress-bar {
   position: absolute;
   top: 0;
@@ -514,6 +508,12 @@ label > span {
   border-radius: inherit;
   background: #111827;
   transition: width 0.3s ease;
+}
+
+.placeholder {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 .admin-actions {

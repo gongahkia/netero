@@ -93,7 +93,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch, defineProps } from 'vue'
 import PollArtifact from '../../../core/build/contracts/Poll.json'
 import { getContract, subscribeToEventOptional } from '../eth'
 import { useNotificationStore } from '../store/notifications'

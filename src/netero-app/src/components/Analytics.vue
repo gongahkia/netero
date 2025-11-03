@@ -67,7 +67,7 @@ import { Chart, LineElement, PointElement, LinearScale, TimeScale, Legend, Toolt
 Chart.register(LineElement, PointElement, LinearScale, TimeScale, Legend, Tooltip, CategoryScale)
 
 export default {
-  name: 'Analytics',
+  name: 'AnalyticsPanel',
   data() {
     return {
       endpoint: 'http://127.0.0.1:8000/subgraphs/name/netero/subgraph',
