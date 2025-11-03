@@ -129,7 +129,6 @@ function handleVote(pollAddress, voter, optionIndex) {
 
 async function initialiseTracking() {
   clearTracking()
-  statusByAddress.value = {}
   const polls = props.pollAddresses.filter(Boolean)
   if (!polls.length || !watchlist.value.length) {
     return
