@@ -20,10 +20,10 @@ services:
   frontend:
     image: node:18-alpine
     container_name: netero-frontend
-    working_dir: /app
+    working_dir: /workspace/netero-app
     volumes:
-      - ./src/netero-app:/app
-      - ./src/core/build:/app/../core/build
+      - ./src/netero-app:/workspace/netero-app
+      - ./src/core/build:/workspace/core/build
     ports:
       - "8080:8080"
     networks:
