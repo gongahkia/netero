@@ -9,17 +9,22 @@ COPY src/netero-app/package*.json ./
 RUN npm ci
 
 COPY src/netero-app/ ./
-COPY src/core/build ./build/contracts
+# Copy compiled contracts to the correct location the app expects
+COPY src/core/build /app/core/build
+
+# Disable ESLint during build
+ENV CI=false
 
 RUN npm run build
 
 # Stage 2: Runtime - Python backend + Ganache + frontend
 FROM python:3.11-slim
 
-# Install Node.js for Ganache
+# Install Node.js and build tools for native modules
 RUN apt-get update && apt-get install -y \
     curl \
     git \
+    build-essential \
     && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
