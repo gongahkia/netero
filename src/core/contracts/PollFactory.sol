@@ -16,12 +16,27 @@ contract PollFactory {
         string[] memory options,
         uint64 startTime,
         uint64 endTime,
-        bool restricted
+        bool restricted,
+        bool privateMode,
+        address trustedForwarder,
+        bytes32 merkleRoot
     ) external returns (address pollAddr) {
         require(options.length >= 2, "Need at least 2 options");
         require(endTime == 0 || endTime > startTime, "Bad time window");
 
-        Poll poll = new Poll(org, msg.sender, title, description, options, startTime, endTime, restricted);
+        Poll poll = new Poll(
+            org,
+            msg.sender,
+            title,
+            description,
+            options,
+            startTime,
+            endTime,
+            restricted,
+            privateMode,
+            trustedForwarder,
+            merkleRoot
+        );
         pollAddr = address(poll);
         _orgPolls[org].push(pollAddr);
         emit PollCreated(org, msg.sender, pollAddr, title);

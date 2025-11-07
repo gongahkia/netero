@@ -16,6 +16,8 @@ type Poll @entity {
   startTime: BigInt!
   endTime: BigInt!
   restricted: Boolean!
+  privateMode: Boolean!
+  merkleRoot: Bytes!
   votes: [Vote!]! @derivedFrom(field: "poll")
 }
 

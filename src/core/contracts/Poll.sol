@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-contract Poll {
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+
+contract Poll is ERC2771Context {
     enum State { Draft, Active, Ended, Finalized }
 
     address public immutable org;
@@ -15,20 +18,26 @@ contract Poll {
 
     uint64 public startTime; // 0 = immediate
     uint64 public endTime;   // 0 = no scheduled end
-    bool   public restricted; // if true, only allowlisted addresses can vote
+    bool   public restricted; // if true, only allowlisted/proved addresses can vote
+    bool   public privateMode; // if true, use commit-reveal instead of open voting
+    bytes32 public merkleRoot; // optional allowlist merkle root
 
     State public state;
 
     mapping(address => bool) public allowlist;
     mapping(address => bool) public hasVoted;
+    mapping(address => bytes32) public commitments; // commit-reveal
+    mapping(address => bool) public hasRevealed;    // commit-reveal
 
     event StateChanged(State indexed oldState, State indexed newState);
     event VoterAllowlisted(address indexed voter, bool allowed);
     event Voted(address indexed voter, uint256 indexed optionIndex);
+    event VoteCommitted(address indexed voter, bytes32 commitment);
+    event VoteRevealed(address indexed voter, uint256 indexed optionIndex);
     event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
 
     modifier onlyAdmin() {
-        require(msg.sender == admin, "Not admin");
+        require(_msgSender() == admin, "Not admin");
         _;
     }
 
@@ -40,8 +49,11 @@ contract Poll {
         string[] memory options,
         uint64 _startTime,
         uint64 _endTime,
-        bool _restricted
-    ) {
+        bool _restricted,
+        bool _privateMode,
+        address _trustedForwarder,
+        bytes32 _merkleRoot
+    ) ERC2771Context(_trustedForwarder) {
         require(options.length >= 2, "Need at least 2 options");
         org = _org;
         admin = _admin;
@@ -54,6 +66,8 @@ contract Poll {
         startTime = _startTime;
         endTime = _endTime;
         restricted = _restricted;
+        privateMode = _privateMode;
+        merkleRoot = _merkleRoot;
         state = State.Draft;
     }
 
@@ -71,6 +85,11 @@ contract Poll {
         }
     }
 
+    function setMerkleRoot(bytes32 _root) external onlyAdmin {
+        require(state == State.Draft, "Only in draft");
+        merkleRoot = _root;
+    }
+
     function setSchedule(uint64 _startTime, uint64 _endTime) external onlyAdmin {
         _maybeAutoClose();
         require(state == State.Draft || state == State.Active, "Locked");
@@ -82,6 +101,11 @@ contract Poll {
     function setRestricted(bool _restricted) external onlyAdmin {
         require(state == State.Draft, "Only in draft");
         restricted = _restricted;
+    }
+
+    function setPrivateMode(bool _private) external onlyAdmin {
+        require(state == State.Draft, "Only in draft");
+        privateMode = _private;
     }
 
     function activate() external onlyAdmin {
@@ -110,16 +134,52 @@ contract Poll {
         require(state == State.Active, "Not active");
         if (startTime != 0) require(block.timestamp >= startTime, "Too early");
         if (endTime != 0) require(block.timestamp <= endTime, "Too late");
+        require(!privateMode, "Use commit");
 
         if (restricted) {
-            require(allowlist[msg.sender], "Not allowlisted");
+            require(allowlist[_msgSender()], "Not allowlisted");
         }
-        require(!hasVoted[msg.sender], "Already voted");
+        require(!hasVoted[_msgSender()], "Already voted");
         require(optionIndex < _options.length, "Invalid option");
-
-        hasVoted[msg.sender] = true;
+        hasVoted[_msgSender()] = true;
         _tallies[optionIndex] += 1;
-        emit Voted(msg.sender, optionIndex);
+        emit Voted(_msgSender(), optionIndex);
+    }
+
+    // Commit-reveal
+    // commitment = keccak256(abi.encodePacked(voter, optionIndex, salt))
+    function commit(bytes32 commitment, bytes32[] calldata proof) external {
+        _maybeAutoClose();
+        require(privateMode, "Not private");
+        require(state == State.Active, "Not active");
+        if (startTime != 0) require(block.timestamp >= startTime, "Too early");
+        if (endTime != 0) require(block.timestamp <= endTime, "Too late");
+        address sender = _msgSender();
+        if (restricted) {
+            if (merkleRoot != bytes32(0)) {
+                bytes32 leaf = keccak256(abi.encodePacked(sender));
+                require(MerkleProof.verifyCalldata(proof, merkleRoot, leaf), "Not allowlisted");
+            } else {
+                require(allowlist[sender], "Not allowlisted");
+            }
+        }
+        require(commitments[sender] == bytes32(0), "Already committed");
+        commitments[sender] = commitment;
+        emit VoteCommitted(sender, commitment);
+    }
+
+    function reveal(uint256 optionIndex, bytes32 salt) external {
+        require(privateMode, "Not private");
+        require(state == State.Ended, "Not reveal phase");
+        address sender = _msgSender();
+        require(!hasRevealed[sender], "Already revealed");
+        require(optionIndex < _options.length, "Invalid option");
+        bytes32 expect = keccak256(abi.encodePacked(sender, optionIndex, salt));
+        require(commitments[sender] == expect, "Bad reveal");
+        hasRevealed[sender] = true;
+        _tallies[optionIndex] += 1;
+        emit VoteRevealed(sender, optionIndex);
+        emit Voted(sender, optionIndex);
     }
 
     // Reads
@@ -143,5 +203,13 @@ contract Poll {
             state = State.Ended;
             emit StateChanged(previous, State.Ended);
         }
+    }
+
+    // ERC2771 overrides
+    function _msgSender() internal view override(Context, ERC2771Context) returns (address sender) {
+        sender = ERC2771Context._msgSender();
+    }
+    function _msgData() internal view override(Context, ERC2771Context) returns (bytes calldata) {
+        return ERC2771Context._msgData();
     }
 }

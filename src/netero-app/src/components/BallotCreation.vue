@@ -80,6 +80,29 @@
       </div>
     </section>
 
+    <section class="modes">
+      <div class="mode-row">
+        <label class="toggle">
+          <input type="checkbox" v-model="privateMode" />
+          <span>Private voting (commit → reveal)</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" v-model="restricted" />
+          <span>Restrict to allowlist</span>
+        </label>
+      </div>
+      <div class="grid-adv">
+        <label>
+          <span>Merkle root (optional)</span>
+          <input class="input" v-model.trim="merkleRoot" placeholder="0x… (32-byte hex)" />
+        </label>
+        <label>
+          <span>Trusted forwarder (optional)</span>
+          <input class="input" v-model.trim="trustedForwarder" placeholder="0x… forwarder address" />
+        </label>
+      </div>
+    </section>
+
     <p v-if="error" class="form-error">{{ error }}</p>
 
     <button class="btn btn-primary" type="submit" :disabled="submitting">
@@ -113,6 +136,9 @@ export default {
       description: '',
       options: ['', ''],
       restricted: false,
+      privateMode: false,
+      merkleRoot: '',
+      trustedForwarder: '',
       startMode: 'immediate',
       scheduledAt: '',
       durationHours: 0,
@@ -174,7 +200,18 @@ export default {
         const accounts = await getAccounts()
         const org = accounts[0]
         const tx = await this.factory.methods
-          .createPoll(org, this.title, this.description, this.options, startTime, endTime, this.restricted)
+          .createPoll(
+            org,
+            this.title,
+            this.description,
+            this.options,
+            startTime,
+            endTime,
+            this.restricted,
+            this.privateMode,
+            this.trustedForwarder || '0x0000000000000000000000000000000000000000',
+            this.merkleRoot || '0x0000000000000000000000000000000000000000000000000000000000000000'
+          )
           .send({ from: accounts[0] })
 
         const event = tx.events?.PollCreated || (tx.logs || []).find((log) => log.event === 'PollCreated')
@@ -208,6 +245,9 @@ export default {
       this.description = ''
       this.options = ['', '']
       this.restricted = false
+      this.privateMode = false
+      this.merkleRoot = ''
+      this.trustedForwarder = ''
       this.startMode = 'immediate'
       this.scheduledAt = ''
       this.durationHours = 0

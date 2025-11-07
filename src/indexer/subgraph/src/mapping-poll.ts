@@ -1,5 +1,5 @@
 import { BigInt } from "@graphprotocol/graph-ts"
-import { Voted, StateChanged } from "../generated/Poll/Poll"
+import { Voted, StateChanged, VoteRevealed } from "../generated/Poll/Poll"
 import { Poll, Vote } from "../generated/schema"
 
 export function handleVoted(event: Voted): void {
@@ -23,6 +23,11 @@ export function handleVoted(event: Voted): void {
   vote.blockNumber = event.block.number
   vote.timestamp = event.block.timestamp
   vote.save()
+}
+
+// Optional: ensure reveal also bumps tallies in private mode
+export function handleVoteRevealed(event: VoteRevealed): void {
+  handleVoted(changetype<Voted>(event))
 }
 
 export function handleStateChanged(event: StateChanged): void {

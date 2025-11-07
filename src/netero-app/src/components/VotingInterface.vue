@@ -51,9 +51,28 @@
           <span>{{ option }}</span>
         </label>
       </div>
-      <button class="btn btn-primary" type="submit" :disabled="!canVote || submitting">
-        {{ submitting ? 'Submitting…' : 'Cast vote' }}
-      </button>
+      <template v-if="!privateMode">
+        <button class="btn btn-primary" type="submit" :disabled="!canVote || submitting">
+          {{ submitting ? 'Submitting…' : 'Cast vote' }}
+        </button>
+      </template>
+      <template v-else>
+        <div class="stack">
+          <label v-if="needsProof" class="proof">
+            <span>Merkle proof</span>
+            <input class="input" v-model.trim="proofText" placeholder="0x...,0x...,0x..." />
+          </label>
+          <div class="row">
+            <button class="btn btn-primary" type="button" @click="commit" :disabled="!canCommit || submitting">
+              {{ submitting ? 'Submitting…' : 'Commit vote' }}
+            </button>
+            <button class="btn" type="button" @click="reveal" :disabled="!canReveal || submitting">
+              {{ submitting ? 'Submitting…' : 'Reveal vote' }}
+            </button>
+          </div>
+          <p class="hint">Your commitment is saved locally to help with reveal. Do not clear your browser storage until you reveal.</p>
+        </div>
+      </template>
     </form>
 
     <div v-else-if="selectedPollAddress" class="empty">No options found for this poll.</div>
@@ -112,6 +131,8 @@ export default {
       subscriptions: [],
       restricted: false,
       isAllowlisted: true,
+      privateMode: false,
+      proofText: '',
     }
   },
   computed: {
@@ -236,19 +257,21 @@ export default {
       try {
         this.teardownSubscriptions()
         this.poll = await getContract(PollArtifact, this.selectedPollAddress)
-        const [options, state, startTime, endTime, remaining, restricted] = await Promise.all([
+        const [options, state, startTime, endTime, remaining, restricted, privateMode] = await Promise.all([
           this.poll.methods.getOptions().call(),
           this.poll.methods.state().call(),
           this.poll.methods.startTime().call(),
           this.poll.methods.endTime().call(),
           this.poll.methods.remainingSeconds().call().catch(() => '-1'),
           this.poll.methods.restricted().call().catch(() => false),
+          this.poll.methods.privateMode().call().catch(() => false),
         ])
         this.options = options
         this.state = Number(state)
         this.startTime = Number(startTime)
         this.endTime = Number(endTime)
-        this.restricted = Boolean(restricted)
+  this.restricted = Boolean(restricted)
+  this.privateMode = Boolean(privateMode)
         const onChainRemaining = Number(remaining)
         const clockRemaining = this.endTime ? Math.floor(this.endTime - Date.now() / 1000) : onChainRemaining
         const candidates = [onChainRemaining, clockRemaining].filter((v) => Number.isFinite(v))
@@ -303,6 +326,7 @@ export default {
         this.setStatus('error', 'Your wallet is not allowlisted for this poll')
         return
       }
+      if (this.privateMode) return // handled by commit/reveal
       try {
         this.submitting = true
         const accounts = await getAccounts()
@@ -315,6 +339,57 @@ export default {
       } finally {
         this.submitting = false
       }
+    },
+    storageKey() {
+      return `netero.commit.${(this.selectedPollAddress || '').toLowerCase()}`
+    },
+    saveCommit(salt, option) {
+      try {
+        const accounts = JSON.parse(localStorage.getItem(this.storageKey()) || '{}')
+        const me = (this.cachedAccount || '').toLowerCase()
+        accounts[me] = { salt, option }
+        localStorage.setItem(this.storageKey(), JSON.stringify(accounts))
+      } catch (e) { /* ignore */ }
+    },
+    loadCommit() {
+      try {
+        const accounts = JSON.parse(localStorage.getItem(this.storageKey()) || '{}')
+        const me = (this.cachedAccount || '').toLowerCase()
+        return accounts[me]
+      } catch (e) { return null }
+    },
+    get cachedAccount() { return (this._acct || '') },
+    async commit() {
+      if (!this.poll || this.selectedOption === null) return
+      try {
+        this.submitting = true
+        const accounts = await getAccounts()
+        this._acct = accounts[0]
+        const salt = '0x' + [...crypto.getRandomValues(new Uint8Array(32))].map(x => x.toString(16).padStart(2, '0')).join('')
+        const commitment = window.web3 ? window.web3.utils.soliditySha3({t:'address', v: accounts[0]}, {t:'uint256', v: this.selectedOption}, {t:'bytes32', v: salt}) : null
+        if (!commitment) throw new Error('Commit hash failed')
+        const proof = (this.proofText || '').split(',').map(s => s.trim()).filter(Boolean)
+        await this.poll.methods.commit(commitment, proof).send({ from: accounts[0] })
+        this.saveCommit(salt, this.selectedOption)
+        this.setStatus('success', 'Commit submitted. Reveal after the voting window ends.')
+      } catch (e) {
+        console.error('Commit failed', e)
+        this.setStatus('error', e?.message || 'Commit failed')
+      } finally { this.submitting = false }
+    },
+    async reveal() {
+      try {
+        this.submitting = true
+        const accounts = await getAccounts()
+        this._acct = accounts[0]
+        const rec = this.loadCommit()
+        if (!rec) throw new Error('No saved commitment for this wallet')
+        await this.poll.methods.reveal(rec.option, rec.salt).send({ from: accounts[0] })
+        this.setStatus('success', 'Reveal submitted')
+      } catch (e) {
+        console.error('Reveal failed', e)
+        this.setStatus('error', e?.message || 'Reveal failed')
+      } finally { this.submitting = false }
     },
     async triggerAutoClose() {
       if (!this.poll) return
@@ -549,4 +624,8 @@ label > span {
   font-weight: 600;
   color: var(--text-primary);
 }
+
+.row { display: flex; gap: 12px; align-items: center; }
+.hint { color: var(--text-muted); font-size: 12px; }
+.proof span { display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
 </style>
