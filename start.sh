@@ -89,6 +89,10 @@ fi
 # Step 2: Start Ganache in the background
 print_status "Starting Ganache (local blockchain)..."
 cd src/core
+if [ -f package.json ]; then
+    print_status "Installing core (solidity) dependencies..."
+    npm ci > ../../$LOG_DIR/core-npm.log 2>&1 || npm install > ../../$LOG_DIR/core-npm.log 2>&1 || true
+fi
 npx ganache --server.port 8545 --chain.chainId 1337 > ../../$LOG_DIR/ganache.log 2>&1 &
 GANACHE_PID=$!
 cd ../..
