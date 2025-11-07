@@ -206,10 +206,10 @@ contract Poll is ERC2771Context {
     }
 
     // ERC2771 overrides
-    function _msgSender() internal view override(Context, ERC2771Context) returns (address sender) {
+    function _msgSender() internal view override returns (address sender) {
         sender = ERC2771Context._msgSender();
     }
-    function _msgData() internal view override(Context, ERC2771Context) returns (bytes calldata) {
+    function _msgData() internal view override returns (bytes calldata) {
         return ERC2771Context._msgData();
     }
 }
