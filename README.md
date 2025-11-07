@@ -48,6 +48,9 @@ $ cd netero-app && npm install && npm run serve
 
 ## Screenshots
 
+![](./asset/screenshot/core.png)
+![](./asset/screenshot/core-1.png)
+![](./asset/screenshot/core-2.png)
 
 ## Architecture
 
