@@ -11,7 +11,10 @@
     </header>
 
     <div v-if="!endpointOk" class="muted">Graph endpoint not available. Start indexer to enable charts.</div>
-    <canvas v-else ref="chart" height="180"></canvas>
+    <div v-else>
+      <div v-if="!labels.length" class="muted">No votes yet.</div>
+      <canvas v-else ref="chart" height="180"></canvas>
+    </div>
   </section>
 </template>
 
@@ -74,6 +77,7 @@ export default {
     },
     render(labels, data) {
       const ctx = this.$refs.chart?.getContext('2d')
+      if (!labels.length) { this.labels = []; this.series = []; if (this.chart) { this.chart.destroy(); this.chart = null }; return }
       if (!ctx) return
       const payload = { labels, datasets: [{ label: 'Cumulative votes', data, borderColor: '#1d4ed8', tension: 0.2, fill: false }] }
       if (this.chart) { this.chart.data = payload; this.chart.update(); return }
