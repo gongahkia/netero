@@ -5,6 +5,10 @@
 
 Decentralized voting platform powered by the blockchain.
 
+<div align='center'>
+    <img src='./asset/logo/netero.gif' width='75%'>
+</div>
+
 ## Stack
 
 * *Frontend*: [Vue.js](https://vuejs.org/) 
