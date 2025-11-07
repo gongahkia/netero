@@ -10,10 +10,11 @@ services:
     networks:
       - netero-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8545"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8545 || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
   # Vue.js frontend
   frontend:
