@@ -27,7 +27,16 @@ export function handleVoted(event: Voted): void {
 
 // Optional: ensure reveal also bumps tallies in private mode
 export function handleVoteRevealed(event: VoteRevealed): void {
-  handleVoted(changetype<Voted>(event))
+  const pollId = event.address.toHex()
+  let poll = Poll.load(pollId)
+  if (poll == null) return
+  const idx = event.params.optionIndex.toI32()
+  let tallies = poll.tallies
+  if (idx >= 0 && idx < tallies.length) {
+    tallies[idx] = tallies[idx].plus(BigInt.fromI32(1))
+    poll.tallies = tallies
+    poll.save()
+  }
 }
 
 export function handleStateChanged(event: StateChanged): void {

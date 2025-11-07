@@ -47,3 +47,5 @@ templates:
           handler: handleVoted
         - event: StateChanged(uint8,uint8)
           handler: handleStateChanged
+        - event: VoteRevealed(indexed address,uint256)
+          handler: handleVoteRevealed
