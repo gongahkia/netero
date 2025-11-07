@@ -23,7 +23,7 @@ services:
     working_dir: /app
     volumes:
       - ./src/netero-app:/app
-      - ./src/core/build:/app/src/core-build
+      - ./src/core/build:/app/../core/build
     ports:
       - "8080:8080"
     networks:
