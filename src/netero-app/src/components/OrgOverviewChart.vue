@@ -12,7 +12,8 @@
 
     <div v-if="!endpointOk" class="muted">Graph endpoint not available. Start indexer to enable charts.</div>
     <div v-else>
-      <div v-if="!labels.length" class="muted">No votes yet.</div>
+      <div v-if="loading" class="muted">Loading…</div>
+      <div v-else-if="!labels.length" class="muted">No votes yet.</div>
       <canvas v-else ref="chart" height="180"></canvas>
     </div>
   </section>
