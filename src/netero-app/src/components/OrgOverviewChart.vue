@@ -22,7 +22,11 @@ import { graphqlRequest } from '../graphql'
 
 export default {
   name: 'OrgOverviewChart',
-  props: { orgAddress: { type: String, required: true }, endpoint: { type: String, default: 'http://127.0.0.1:8000/subgraphs/name/netero/subgraph' } },
+  props: {
+    orgAddress: { type: String, required: true },
+    endpoint: { type: String, default: 'http://127.0.0.1:8000/subgraphs/name/netero/subgraph' },
+    bucketMinutes: { type: Number, default: 1 }
+  },
   data() {
     return { loading: false, endpointOk: false, chart: null, labels: [], series: [] }
   },
@@ -48,11 +52,13 @@ export default {
         const r2 = await graphqlRequest(this.endpoint, `query($ids: [String!]) { votes(where: { poll_in: $ids }, orderBy: timestamp, orderDirection: asc) { timestamp } }`, { ids: pollIds })
         const votes = r2.votes || []
         const times = votes.map(v => Number(v.timestamp) * 1000)
-        // Bucket by minute
+        // Bucket by configurable minute interval
         const bucketed = new Map()
         times.forEach(ts => {
           const d = new Date(ts)
-          d.setSeconds(0, 0)
+          const m = d.getMinutes()
+          const snapped = m - (m % Math.max(1, this.bucketMinutes))
+          d.setMinutes(snapped, 0, 0)
           const key = d.getTime()
           bucketed.set(key, (bucketed.get(key) || 0) + 1)
         })
