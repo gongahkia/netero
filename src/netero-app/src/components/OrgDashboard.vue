@@ -81,6 +81,7 @@
         <AnalyticsPanel :org-address="orgAddress" :focus-poll="primaryPoll" />
       </div>
       <OrgStats :org-address="orgAddress" />
+      <OrgOverviewChart :org-address="orgAddress" />
     </section>
   </div>
 </template>
@@ -93,6 +94,7 @@ import WalletConnection from './WalletConnection.vue'
 import NotificationPanel from './NotificationPanel.vue'
 import AnalyticsPanel from './Analytics.vue'
 import OrgStats from './OrgStats.vue'
+import OrgOverviewChart from './OrgOverviewChart.vue'
 import { initWeb3, getAccounts, getDeployedAddress, getContract } from '../eth'
 import PollFactoryArtifact from '../../../core/build/contracts/PollFactory.json'
 
@@ -106,6 +108,7 @@ export default {
     NotificationPanel,
     AnalyticsPanel,
     OrgStats,
+    OrgOverviewChart,
   },
   data() {
     return {
