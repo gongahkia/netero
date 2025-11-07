@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Ganache blockchain + Smart contracts deployment
   ganache:
