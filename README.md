@@ -1,11 +1,37 @@
 [![](https://img.shields.io/badge/netero_1.0.0-passing-green)](https://github.com/gongahkia/netero/releases/tag/1.0.0) 
-[![](https://img.shields.io/badge/netero_2.0.0-passing-green)](https://github.com/gongahkia/netero/releases/tag/2.0.0) 
+[![](https://img.shields.io/badge/netero_2.0.0-passing-green)](https://github.com/gongahkia/netero/releases/tag/2.0.0)
+[![](https://img.shields.io/badge/netero_2.1.0-passing-green)](https://github.com/gongahkia/netero/releases/tag/2.1.0)
 
 # `Netero`
 
 Decentralized voting platform powered by the blockchain.
 
 For the [stack used](#tech-used).
+
+## ✨ New in v2.1.0
+
+- **📊 Org Overview Chart**: Subgraph-backed analytics showing votes over time across all polls
+- **⚡ Gasless Voting Badge**: Visual indicator when meta-transactions are enabled (ERC-2771)
+- **🔐 Enhanced Commit-Reveal UX**: 
+  - One-click salt copy button
+  - Encrypted local backup with download/import
+  - Better visual feedback and workflow
+
+See [FEATURES.md](./FEATURES.md) for detailed documentation.
+
+## 🐳 Docker Support
+
+Netero can now be fully containerized and run on any device with Docker:
+
+```bash
+# Quick start
+docker-compose up --build
+
+# With subgraph indexer
+docker-compose --profile indexer up --build
+```
+
+See [DOCKER.md](./DOCKER.md) for complete Docker deployment guide.
 
 <div align="center">
     <img src="./asset/screenshot/home.png" width="80%">

@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Ganache blockchain + Smart contracts deployment
+  ganache:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: netero-ganache
+    ports:
+      - "8545:8545"
+    networks:
+      - netero-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8545"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Vue.js frontend
+  frontend:
+    image: node:18-alpine
+    container_name: netero-frontend
+    working_dir: /app
+    volumes:
+      - ./src/netero-app:/app
+      - ./src/core/build:/app/src/core-build
+    ports:
+      - "8080:8080"
+    networks:
+      - netero-network
+    depends_on:
+      ganache:
+        condition: service_healthy
+    command: >
+      sh -c "npm install && npm run serve -- --host 0.0.0.0 --port 8080"
+
+  # Graph Node Indexer Stack (optional - for subgraph)
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: netero-ipfs
+    ports:
+      - "5001:5001"
+      - "8081:8080"
+    volumes:
+      - ipfs_data:/data/ipfs
+    networks:
+      - netero-network
+    profiles:
+      - indexer
+
+  postgres:
+    image: postgres:14
+    container_name: netero-postgres
+    environment:
+      POSTGRES_PASSWORD: let-me-in
+      POSTGRES_USER: graph
+      POSTGRES_DB: graph
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - netero-network
+    profiles:
+      - indexer
+
+  graph-node:
+    image: graphprotocol/graph-node:latest
+    container_name: netero-graph-node
+    depends_on:
+      - ipfs
+      - postgres
+      - ganache
+    environment:
+      postgres_host: postgres
+      postgres_user: graph
+      postgres_pass: let-me-in
+      postgres_db: graph
+      ipfs: "ipfs:5001"
+      ethereum: "mainnet:http://ganache:8545"
+      RUST_LOG: info
+      GRAPH_LOG: info
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8020:8020"
+      - "8030:8030"
+    networks:
+      - netero-network
+    profiles:
+      - indexer
+
+networks:
+  netero-network:
+    driver: bridge
+
+volumes:
+  ipfs_data:
+  pg_data:

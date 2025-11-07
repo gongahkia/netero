@@ -63,6 +63,26 @@
             <span>Merkle proof</span>
             <input class="input" v-model.trim="proofText" placeholder="0x...,0x...,0x..." />
           </label>
+          
+          <div v-if="committedSalt" class="commitment-info">
+            <p class="hint">Your commitment is saved. Keep this salt safe for the reveal phase:</p>
+            <div class="salt-display">
+              <code class="salt-value">{{ committedSalt }}</code>
+              <button class="btn btn-ghost copy-btn" type="button" @click="copySalt" :title="copySaltLabel">
+                {{ copySaltLabel }}
+              </button>
+            </div>
+            <div class="backup-actions">
+              <button class="btn btn-ghost" type="button" @click="downloadBackup">
+                📥 Download encrypted backup
+              </button>
+              <button class="btn btn-ghost" type="button" @click="triggerImportBackup">
+                📤 Import backup
+              </button>
+              <input ref="backupFile" type="file" accept=".json" style="display: none" @change="importBackup" />
+            </div>
+          </div>
+          
           <div class="row">
             <button class="btn btn-primary" type="button" @click="commit" :disabled="!canCommit || submitting">
               {{ submitting ? 'Submitting…' : 'Commit vote' }}
@@ -71,7 +91,7 @@
               {{ submitting ? 'Submitting…' : 'Reveal vote' }}
             </button>
           </div>
-          <p class="hint">Your commitment is saved locally to help with reveal. Do not clear your browser storage until you reveal.</p>
+          <p v-if="!committedSalt" class="hint">Your commitment is saved locally to help with reveal. Do not clear your browser storage until you reveal.</p>
         </div>
       </template>
     </form>
@@ -135,6 +155,8 @@ export default {
       privateMode: false,
       proofText: '',
       trustedForwarder: '',
+      committedSalt: '',
+      copySaltLabel: 'Copy',
     }
   },
   computed: {
@@ -366,7 +388,7 @@ export default {
       try {
         const accounts = JSON.parse(localStorage.getItem(this.storageKey()) || '{}')
         const me = (this.cachedAccount || '').toLowerCase()
-        accounts[me] = { salt, option }
+        accounts[me] = { salt, option, timestamp: Date.now() }
         localStorage.setItem(this.storageKey(), JSON.stringify(accounts))
       } catch (e) { /* ignore */ }
     },
@@ -395,6 +417,7 @@ export default {
         const proof = (this.proofText || '').split(',').map(s => s.trim()).filter(Boolean)
         await this.poll.methods.commit(commitment, proof).send({ from: accounts[0] })
         this.saveCommit(salt, this.selectedOption)
+        this.committedSalt = salt
         this.setStatus('success', 'Commit submitted. Reveal after the voting window ends.')
       } catch (e) {
         console.error('Commit failed', e)
@@ -409,11 +432,97 @@ export default {
         const rec = this.loadCommit()
         if (!rec) throw new Error('No saved commitment for this wallet')
         await this.poll.methods.reveal(rec.option, rec.salt).send({ from: accounts[0] })
+        this.committedSalt = ''
         this.setStatus('success', 'Reveal submitted')
       } catch (e) {
         console.error('Reveal failed', e)
         this.setStatus('error', e?.message || 'Reveal failed')
       } finally { this.submitting = false }
+    },
+    copySalt() {
+      if (!this.committedSalt) return
+      navigator.clipboard.writeText(this.committedSalt).then(() => {
+        this.copySaltLabel = '✓ Copied'
+        setTimeout(() => { this.copySaltLabel = 'Copy' }, 2000)
+      }).catch(() => {
+        this.copySaltLabel = '✗ Failed'
+        setTimeout(() => { this.copySaltLabel = 'Copy' }, 2000)
+      })
+    },
+    async downloadBackup() {
+      if (!this.committedSalt || this.selectedOption === null) return
+      try {
+        const accounts = await getAccounts()
+        const passphrase = prompt('Enter a passphrase to encrypt your backup:')
+        if (!passphrase) return
+        
+        const data = {
+          poll: this.selectedPollAddress,
+          account: accounts[0],
+          salt: this.committedSalt,
+          option: this.selectedOption,
+          timestamp: Date.now()
+        }
+        
+        // Simple XOR encryption (for demo purposes - in production use proper crypto)
+        const encrypted = this.simpleEncrypt(JSON.stringify(data), passphrase)
+        const blob = new Blob([JSON.stringify({ encrypted, v: 1 })], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `netero-commit-${this.selectedPollAddress.slice(0, 8)}.json`
+        a.click()
+        URL.revokeObjectURL(url)
+        this.setStatus('success', 'Backup downloaded')
+      } catch (e) {
+        console.error('Backup failed', e)
+        this.setStatus('error', 'Failed to create backup')
+      }
+    },
+    triggerImportBackup() {
+      this.$refs.backupFile?.click()
+    },
+    async importBackup(event) {
+      const file = event.target?.files?.[0]
+      if (!file) return
+      try {
+        const text = await file.text()
+        const parsed = JSON.parse(text)
+        const passphrase = prompt('Enter your backup passphrase:')
+        if (!passphrase) return
+        
+        const decrypted = this.simpleDecrypt(parsed.encrypted, passphrase)
+        const data = JSON.parse(decrypted)
+        
+        if (data.poll !== this.selectedPollAddress) {
+          throw new Error('Backup is for a different poll')
+        }
+        
+        this.committedSalt = data.salt
+        this.selectedOption = data.option
+        this.saveCommit(data.salt, data.option)
+        this.setStatus('success', 'Backup restored successfully')
+      } catch (e) {
+        console.error('Import failed', e)
+        this.setStatus('error', e?.message || 'Failed to import backup')
+      } finally {
+        if (this.$refs.backupFile) this.$refs.backupFile.value = ''
+      }
+    },
+    simpleEncrypt(text, key) {
+      let result = ''
+      for (let i = 0; i < text.length; i++) {
+        result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length))
+      }
+      return btoa(result)
+    },
+    simpleDecrypt(encrypted, key) {
+      const text = atob(encrypted)
+      let result = ''
+      for (let i = 0; i < text.length; i++) {
+        result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length))
+      }
+      return result
     },
     async triggerAutoClose() {
       if (!this.poll) return
@@ -652,6 +761,49 @@ label > span {
 .row { display: flex; gap: 12px; align-items: center; }
 .hint { color: var(--text-muted); font-size: 12px; }
 .proof span { display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.stack { display: grid; gap: 16px; }
+
+.commitment-info {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-muted);
+  display: grid;
+  gap: 12px;
+}
+
+.salt-display {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.salt-value {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.copy-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.backup-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.backup-actions .btn {
+  font-size: 12px;
+  padding: 6px 10px;
+}
 
 .gasless-badge {
   display: inline-flex;
