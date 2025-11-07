@@ -29,7 +29,8 @@ export default {
   props: {
     orgAddress: { type: String, required: true },
     endpoint: { type: String, default: 'http://127.0.0.1:8000/subgraphs/name/netero/subgraph' },
-    bucketMinutes: { type: Number, default: 1 }
+    bucketMinutes: { type: Number, default: 1 },
+    maxPoints: { type: Number, default: 60 }
   },
   data() {
     return { loading: false, endpointOk: false, chart: null, labels: [], series: [] }
@@ -66,11 +67,11 @@ export default {
           const key = d.getTime()
           bucketed.set(key, (bucketed.get(key) || 0) + 1)
         })
-        const labels = Array.from(bucketed.keys()).sort((a,b)=>a-b).map(t => new Date(t).toLocaleTimeString())
-        const data = labels.map((_, i) => {
-          const t = Array.from(bucketed.keys()).sort((a,b)=>a-b)[i]
-          return Array.from(bucketed.entries()).filter(([k]) => k <= t).reduce((s, [,v]) => s+v, 0)
-        })
+        const keys = Array.from(bucketed.keys()).sort((a,b)=>a-b)
+        const limitedKeys = this.maxPoints > 0 ? keys.slice(-this.maxPoints) : keys
+        const labels = limitedKeys.map(t => new Date(t).toLocaleTimeString())
+        let running = 0
+        const data = limitedKeys.map(t => { running += (bucketed.get(t) || 0); return running })
         this.render(labels, data)
       } catch (e) {
         this.render([], [])
