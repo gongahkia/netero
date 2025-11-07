@@ -1,4 +1,4 @@
-import { Address, BigInt } from "@graphprotocol/graph-ts"
+import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts"
 import { PollCreated } from "../generated/PollFactory/PollFactory"
 import { Poll as PollContract } from "../generated/PollFactory/Poll"
 import { Org, Poll } from "../generated/schema"
@@ -48,6 +48,6 @@ export function handlePollCreated(event: PollCreated): void {
   poll.endTime = endResult.reverted ? BigInt.fromI32(0) : endResult.value
   poll.restricted = restResult.reverted ? false : restResult.value
   poll.privateMode = privResult.reverted ? false : privResult.value
-  poll.merkleRoot = rootResult.reverted ? Address.zero() : rootResult.value
+  poll.merkleRoot = rootResult.reverted ? Bytes.empty() : rootResult.value
   poll.save()
 }

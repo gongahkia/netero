@@ -172,6 +172,18 @@ export default {
     showAutoClose() {
       return this.state === 1 && this.endTime && this.remainingSeconds <= 0
     },
+    needsProof() {
+      // heuristic: if poll is restricted and organizer likely used merkle root, accept optional proof field
+      return this.restricted
+    },
+    canCommit() {
+      if (!this.privateMode) return false
+      return this.canVote
+    },
+    canReveal() {
+      if (!this.privateMode) return false
+      return this.state === 2 // Ended
+    },
   },
   watch: {
     address: {
@@ -366,7 +378,12 @@ export default {
         const accounts = await getAccounts()
         this._acct = accounts[0]
         const salt = '0x' + [...crypto.getRandomValues(new Uint8Array(32))].map(x => x.toString(16).padStart(2, '0')).join('')
-        const commitment = window.web3 ? window.web3.utils.soliditySha3({t:'address', v: accounts[0]}, {t:'uint256', v: this.selectedOption}, {t:'bytes32', v: salt}) : null
+        const web3 = await initWeb3()
+        const commitment = web3?.utils?.soliditySha3(
+          {t:'address', v: accounts[0]},
+          {t:'uint256', v: this.selectedOption},
+          {t:'bytes32', v: salt}
+        )
         if (!commitment) throw new Error('Commit hash failed')
         const proof = (this.proofText || '').split(',').map(s => s.trim()).filter(Boolean)
         await this.poll.methods.commit(commitment, proof).send({ from: accounts[0] })

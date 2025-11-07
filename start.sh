@@ -64,16 +64,12 @@ echo ""
 LOG_DIR="logs"
 mkdir -p "$LOG_DIR"
 
-# Step 1: Install dependencies if needed
-if [ ! -d "src/netero-app/node_modules" ]; then
-    print_status "Installing frontend dependencies..."
-    cd src/netero-app
-    npm install
-    cd ../..
-    print_success "Frontend dependencies installed"
-else
-    print_success "Frontend dependencies already installed"
-fi
+# Step 1: Install frontend dependencies (always ensure up to date)
+print_status "Installing frontend dependencies..."
+cd src/netero-app
+npm install > ../../$LOG_DIR/frontend-npm.log 2>&1 || true
+cd ../..
+print_success "Frontend dependencies installed/updated"
 
 # Check if truffle and ganache are available
 if ! npm list -g ganache &> /dev/null && ! npm list ganache &> /dev/null; then

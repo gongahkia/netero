@@ -41,12 +41,20 @@
           <input type="checkbox" v-model="allowed" />
           <span>{{ allowed ? 'Grant voting rights' : 'Revoke voting rights' }}</span>
         </label>
+        <label class="toggle">
+          <input type="checkbox" v-model="useMerkle" />
+          <span>Generate Merkle root (export below)</span>
+        </label>
         <span class="count">{{ addressCount }} address{{ addressCount === 1 ? '' : 'es' }}</span>
       </div>
 
       <button class="btn btn-primary" type="submit" :disabled="loading">
         {{ loading ? 'Submitting…' : 'Update allowlist' }}
       </button>
+      <div v-if="useMerkle" class="merkle-tools">
+        <button class="btn" type="button" @click="exportMerkle">Export Merkle data</button>
+        <p class="helper">Paste the Merkle root into Ballot creation; share the downloaded proofs.json with voters for the proof field.</p>
+      </div>
     </form>
 
     <p v-if="feedback" :class="['feedback', feedbackType]">{{ feedback }}</p>
@@ -78,6 +86,7 @@ export default {
       loading: false,
       feedback: '',
       feedbackType: 'success',
+      useMerkle: false,
     }
   },
   computed: {
@@ -86,6 +95,32 @@ export default {
         .split(/[\s,]+/)
         .map((value) => value.trim())
         .filter(Boolean)
+    },
+    async exportMerkle() {
+      try {
+        const addrs = this.parsedAddresses
+        if (!addrs.length) throw new Error('No addresses to generate tree from')
+        const { default: { MerkleTree } } = await import('merkletreejs')
+        const { default: keccak256 } = await import('keccak256')
+        const leaves = addrs.map((a) => Buffer.from(web3.utils.soliditySha3({ t: 'address', v: a }).slice(2), 'hex'))
+        const tree = new MerkleTree(leaves, keccak256, { sortPairs: true })
+        const root = '0x' + tree.getRoot().toString('hex')
+        const proofs = {}
+        for (const a of addrs) {
+          const leaf = Buffer.from(web3.utils.soliditySha3({ t: 'address', v: a }).slice(2), 'hex')
+          proofs[a.toLowerCase()] = tree.getHexProof(leaf)
+        }
+        const payload = { root, proofs }
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'proofs.json'
+        a.click()
+        URL.revokeObjectURL(url)
+      } catch (e) {
+        console.error('Merkle export failed', e)
+      }
     },
     addressCount() {
       return this.parsedAddresses.length
