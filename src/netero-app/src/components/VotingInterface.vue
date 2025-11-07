@@ -32,9 +32,17 @@
       <span v-if="startTime" class="meta">Opens {{ formatTime(startTime * 1000) }}</span>
       <span v-if="endTime" class="meta">Closes {{ formatTime(endTime * 1000) }}</span>
       <span v-if="timerCopy" class="countdown">{{ timerCopy }}</span>
+      <PollShare v-if="selectedPollAddress" :address="selectedPollAddress" />
     </div>
 
     <p v-if="status" class="status-message" :class="status.type">{{ status.message }}</p>
+
+    <div v-if="restricted && !isAllowlisted" class="notice">
+      <p>
+        This poll is restricted. Your wallet isn’t allowlisted yet.
+        Please contact the organizer to be added before voting.
+      </p>
+    </div>
 
     <form v-if="options.length" class="ballot" @submit.prevent="castVote">
       <div class="options">
@@ -67,6 +75,7 @@ import {
   getContract,
   subscribeToEventOptional,
 } from '../eth'
+import PollShare from './PollShare.vue'
 import PollFactoryArtifact from '../../../core/build/contracts/PollFactory.json'
 import PollArtifact from '../../../core/build/contracts/Poll.json'
 
@@ -74,6 +83,7 @@ const STATE_LABELS = ['Draft', 'Active', 'Ended', 'Finalized']
 
 export default {
   name: 'VotingInterface',
+  components: { PollShare },
   props: {
     address: {
       type: String,
@@ -100,6 +110,8 @@ export default {
       loading: false,
       factory: null,
       subscriptions: [],
+      restricted: false,
+      isAllowlisted: true,
     }
   },
   computed: {
@@ -164,6 +176,9 @@ export default {
       this.orgAddressInternal = accounts[0]
       const factoryAddress = await getDeployedAddress(PollFactoryArtifact)
       this.factory = await getContract(PollFactoryArtifact, factoryAddress)
+      // Support deep link via hash #poll=0x...
+      this.applyHash()
+      window.addEventListener('hashchange', this.applyHash)
       await this.loadOrgPolls()
       if (!this.address && this.polls.length && !this.selectedPollAddress) {
         this.selectedPollAddress = this.polls[this.polls.length - 1]
@@ -175,8 +190,18 @@ export default {
   },
   beforeUnmount() {
     this.teardown()
+    window.removeEventListener('hashchange', this.applyHash)
   },
   methods: {
+    applyHash() {
+      try {
+        const hash = window.location.hash || ''
+        const m = hash.match(/poll=(0x[a-fA-F0-9]{40})/)
+        if (m && m[1] && !this.address) {
+          this.selectedPollAddress = m[1]
+        }
+      } catch (e) { /* ignore */ }
+    },
     async loadOrgPolls() {
       try {
         if (!this.factory || !this.orgAddressInternal) return
@@ -211,28 +236,50 @@ export default {
       try {
         this.teardownSubscriptions()
         this.poll = await getContract(PollArtifact, this.selectedPollAddress)
-        const [options, state, startTime, endTime, remaining] = await Promise.all([
+        const [options, state, startTime, endTime, remaining, restricted] = await Promise.all([
           this.poll.methods.getOptions().call(),
           this.poll.methods.state().call(),
           this.poll.methods.startTime().call(),
           this.poll.methods.endTime().call(),
           this.poll.methods.remainingSeconds().call().catch(() => '-1'),
+          this.poll.methods.restricted().call().catch(() => false),
         ])
         this.options = options
         this.state = Number(state)
         this.startTime = Number(startTime)
         this.endTime = Number(endTime)
+        this.restricted = Boolean(restricted)
         const onChainRemaining = Number(remaining)
         const clockRemaining = this.endTime ? Math.floor(this.endTime - Date.now() / 1000) : onChainRemaining
         const candidates = [onChainRemaining, clockRemaining].filter((v) => Number.isFinite(v))
         this.remainingSeconds = candidates.length ? Math.min(...candidates) : -1
         this.selectedOption = null
         this.status = null
+        await this.evaluateAllowlist()
         this.startCountdown()
         this.setupSubscriptions()
       } catch (error) {
         console.error('Failed to load poll details', error)
         this.status = { type: 'error', message: 'Unable to load poll details' }
+      }
+    },
+    async evaluateAllowlist() {
+      try {
+        if (!this.poll) return
+        if (!this.restricted) {
+          this.isAllowlisted = true
+          return
+        }
+        const accounts = await getAccounts()
+        const me = accounts[0]
+        if (!me) {
+          this.isAllowlisted = false
+          return
+        }
+        const allowed = await this.poll.methods.allowlist(me).call().catch(() => false)
+        this.isAllowlisted = Boolean(allowed)
+      } catch (e) {
+        this.isAllowlisted = true
       }
     },
     startCountdown() {
@@ -252,6 +299,10 @@ export default {
     },
     async castVote() {
       if (!this.poll || this.selectedOption === null) return
+      if (this.restricted && !this.isAllowlisted) {
+        this.setStatus('error', 'Your wallet is not allowlisted for this poll')
+        return
+      }
       try {
         this.submitting = true
         const accounts = await getAccounts()
@@ -471,6 +522,15 @@ label > span {
 
 .status-message.error {
   color: #b91c1c;
+}
+
+.notice {
+  padding: 12px 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-muted);
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .autoclose {

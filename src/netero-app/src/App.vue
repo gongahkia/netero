@@ -1,5 +1,6 @@
 <template>
   <div id="app">
+    <NetworkGuard />
     <RoleSelectionModal :show="!userRole" @role-selected="handleRoleSelection" />
 
     <header v-if="userRole" class="app-header">
@@ -34,17 +35,21 @@
         </a>
       </div>
     </footer>
+
+    <Toasts />
   </div>
 </template>
 
 <script>
 import RoleSelectionModal from './components/RoleSelectionModal.vue'
+import NetworkGuard from './components/NetworkGuard.vue'
+import Toasts from './components/Toasts.vue'
 
 const ROLE_KEY = 'netero.role'
 
 export default {
   name: 'App',
-  components: { RoleSelectionModal },
+  components: { RoleSelectionModal, NetworkGuard, Toasts },
   data() {
     return {
       userRole: null,

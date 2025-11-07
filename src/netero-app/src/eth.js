@@ -52,6 +52,57 @@ export async function getNetworkId() {
   }
 }
 
+export async function getChainIdHex() {
+  try {
+    if (!window?.ethereum) return null
+    const id = await window.ethereum.request({ method: 'eth_chainId' })
+    return id
+  } catch (e) {
+    console.warn('getChainIdHex failed', e)
+    return null
+  }
+}
+
+export async function isCorrectNetwork() {
+  const chainId = await getChainIdHex()
+  // Local Ganache default in this project
+  return chainId === '0x539' || chainId === '0x7e0' // 1337 or 2016 (fallback)
+}
+
+export async function switchToLocalNetwork() {
+  if (!window?.ethereum) return false
+  try {
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: '0x539' }], // 1337
+    })
+    return true
+  } catch (switchError) {
+    // If the chain hasn't been added to MetaMask
+    if (switchError?.code === 4902) {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [
+            {
+              chainId: '0x539',
+              chainName: 'Netero Local 1337',
+              nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+              rpcUrls: ['http://127.0.0.1:8545'],
+            },
+          ],
+        })
+        return true
+      } catch (addErr) {
+        console.warn('Failed to add local chain', addErr)
+        return false
+      }
+    }
+    console.warn('Failed to switch network', switchError)
+    return false
+  }
+}
+
 export async function getDeployedAddress(artifact) {
   const networkId = await getNetworkId()
   if (!networkId) return null

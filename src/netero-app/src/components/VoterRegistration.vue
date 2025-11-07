@@ -31,6 +31,11 @@
         ></textarea>
       </label>
 
+      <div class="upload-row">
+        <input type="file" accept=".csv,.txt" @change="onFile" />
+        <span class="hint">Upload CSV or TXT — one address per line or comma-separated.</span>
+      </div>
+
       <div class="allow-controls">
         <label class="toggle">
           <input type="checkbox" v-model="allowed" />
@@ -129,6 +134,30 @@ export default {
     emitPolls() {
       this.$emit('polls-updated', this.polls)
     },
+    onFile(e) {
+      const file = e.target.files && e.target.files[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          const content = String(reader.result || '')
+          const items = content
+            .split(/[\s,\n\r]+/)
+            .map((s) => s.trim())
+            .filter(Boolean)
+          const merged = new Set([...
+            this.parsedAddresses,
+            ...items,
+          ])
+          this.addressesText = Array.from(merged).join('\n')
+        } catch (err) {
+          console.error('Failed to parse file', err)
+        }
+      }
+      reader.readAsText(file)
+      // reset value to allow re-uploading the same file
+      e.target.value = ''
+    },
     validateAddresses(addresses) {
       const invalid = addresses.find((address) => !/^0x[a-fA-F0-9]{40}$/.test(address))
       if (invalid) {
@@ -208,6 +237,14 @@ label > span {
   display: grid;
   gap: 16px;
 }
+
+.upload-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.upload-row .hint { font-size: 12px; color: var(--text-secondary); }
 
 .allow-controls {
   display: flex;

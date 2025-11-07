@@ -120,7 +120,46 @@ else
     exit 1
 fi
 
-# Step 4: Start Vue.js frontend
+# Optional Step 4: Bring up local Graph indexer and deploy subgraph (can skip with NETERO_SKIP_INDEXER=1)
+if [ -z "${NETERO_SKIP_INDEXER}" ]; then
+    print_status "Starting local Graph indexer (docker compose)…"
+    (
+        cd src/indexer
+        docker compose up -d > ../../$LOG_DIR/indexer.log 2>&1
+    )
+    print_status "Waiting for Graph Node to become ready…"
+    # Wait for Admin API (8020) and GraphQL (8000)
+    START_TS=$(date +%s)
+    TIMEOUT=120
+    until curl -sf -o /dev/null http://127.0.0.1:8020/ && curl -sf -o /dev/null http://127.0.0.1:8000/health; do
+        sleep 2
+        NOW=$(date +%s)
+        if [ $((NOW-START_TS)) -ge $TIMEOUT ]; then
+            print_warning "Graph services not healthy yet. Continuing anyway."
+            break
+        fi
+    done
+
+    print_status "Deploying subgraph…"
+    (
+        cd src/indexer/subgraph
+        # Install CLI if needed (local devDependency)
+        npm ci > ../../../$LOG_DIR/subgraph-npm.log 2>&1 || npm install > ../../../$LOG_DIR/subgraph-npm.log 2>&1
+        # Set factory address from Truffle artifact
+        npm run set-address > ../../../$LOG_DIR/subgraph.log 2>&1 || true
+        # Build and deploy
+        npx graph codegen >> ../../../$LOG_DIR/subgraph.log 2>&1
+        npx graph build >> ../../../$LOG_DIR/subgraph.log 2>&1
+        # create can fail if exists; ignore error
+        npx graph create --node http://127.0.0.1:8020 netero/subgraph >> ../../../$LOG_DIR/subgraph.log 2>&1 || true
+        npx graph deploy --node http://127.0.0.1:8020 --ipfs http://127.0.0.1:5001 netero/subgraph >> ../../../$LOG_DIR/subgraph.log 2>&1 || true
+    )
+    print_success "Subgraph deployed (check http://127.0.0.1:8000/subgraphs/name/netero/subgraph)"
+else
+    print_status "Skipping indexer startup and subgraph deployment (NETERO_SKIP_INDEXER=1)"
+fi
+
+# Step 5: Start Vue.js frontend
 print_status "Starting Vue.js frontend..."
 cd src/netero-app
 npm run serve > ../../$LOG_DIR/vue.log 2>&1 &

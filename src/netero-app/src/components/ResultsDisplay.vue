@@ -29,6 +29,7 @@
       <div class="state">
         <span class="state-chip" :class="stateClass">{{ stateLabel }}</span>
         <span v-if="totalVotes >= 0" class="meta">{{ totalVotes }} vote{{ totalVotes === 1 ? '' : 's' }}</span>
+        <PollShare :address="selectedPollAddress" />
       </div>
     </section>
 
@@ -74,6 +75,7 @@ import { initWeb3, getAccounts, getDeployedAddress, getContract, subscribeToEven
 import PollFactoryArtifact from '../../../core/build/contracts/PollFactory.json'
 import PollArtifact from '../../../core/build/contracts/Poll.json'
 import { Chart, ArcElement, Tooltip, Legend } from 'chart.js'
+import PollShare from './PollShare.vue'
 
 Chart.register(ArcElement, Tooltip, Legend)
 
@@ -81,6 +83,7 @@ const STATE_LABELS = ['Draft', 'Active', 'Ended', 'Finalized']
 
 export default {
   name: 'ResultsDisplay',
+  components: { PollShare },
   props: {
     address: {
       type: String,

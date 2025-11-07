@@ -20,6 +20,8 @@ dataSources:
       abis:
         - name: PollFactory
           file: ../../core/build/contracts/PollFactory.json
+        - name: Poll
+          file: ../../core/build/contracts/Poll.json
       eventHandlers:
         - event: PollCreated(indexed address,indexed address,address,string)
           handler: handlePollCreated
