@@ -9,9 +9,9 @@ import socket
 # ----- helper functions -----
 
 def run_ganache():
-    print("Starting Ganache on http://127.0.0.1:8545 ...")
+    print("Starting Ganache on http://0.0.0.0:8545 ...")
     # Keep Ganache running in this thread until killed
-    subprocess.run(["npx", "ganache", "--host=127.0.0.1", "--port=8545"], check=True)
+    subprocess.run(["npx", "ganache", "--host=0.0.0.0", "--port=8545"], check=True)
 
 def wait_for_port(host: str, port: int, timeout: float = 60.0):
     start = time.time()
