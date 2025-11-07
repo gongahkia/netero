@@ -29,8 +29,7 @@ services:
     networks:
       - netero-network
     depends_on:
-      ganache:
-        condition: service_healthy
+      - ganache
     command: >
       sh -c "npm install && npm run serve -- --host 0.0.0.0 --port 8080"
 
