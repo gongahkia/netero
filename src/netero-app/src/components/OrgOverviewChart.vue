@@ -45,18 +45,34 @@ export default {
       if (!this.orgAddress || !this.endpointOk) return
       this.loading = true
       try {
-        // Fetch votes across all polls of this org ordered by timestamp asc
-        const q = `query($org: String!) {
-          polls(where: { org: $org }) { id }
-          votes(where: { poll_in: (polls: $org) }) { id }
-        }`
-        // Simpler approach: two queries
-        const r1 = await graphqlRequest(this.endpoint, `query($org: String!) { polls(where: { org: $org }) { id } }`, { org: this.orgAddress.toLowerCase() })
+        // Fetch all polls for this org
+        const r1 = await graphqlRequest(this.endpoint, `query($org: String!) { 
+          polls(where: { org: $org }, orderBy: createdAt, orderDirection: asc) { 
+            id 
+          } 
+        }`, { org: this.orgAddress.toLowerCase() })
+        
         const pollIds = (r1.polls || []).map(p => p.id)
-        if (!pollIds.length) { this.render([], []); return }
-        const r2 = await graphqlRequest(this.endpoint, `query($ids: [String!]) { votes(where: { poll_in: $ids }, orderBy: timestamp, orderDirection: asc) { timestamp } }`, { ids: pollIds })
+        if (!pollIds.length) { 
+          this.render([], [])
+          return 
+        }
+        
+        // Fetch all votes across these polls ordered by timestamp
+        const r2 = await graphqlRequest(this.endpoint, `query($ids: [String!]!) { 
+          votes(where: { poll_in: $ids }, orderBy: timestamp, orderDirection: asc, first: 1000) { 
+            timestamp 
+          } 
+        }`, { ids: pollIds })
+        
         const votes = r2.votes || []
+        if (!votes.length) {
+          this.render([], [])
+          return
+        }
+        
         const times = votes.map(v => Number(v.timestamp) * 1000)
+        
         // Bucket by configurable minute interval
         const bucketed = new Map()
         times.forEach(ts => {
@@ -67,15 +83,25 @@ export default {
           const key = d.getTime()
           bucketed.set(key, (bucketed.get(key) || 0) + 1)
         })
+        
         const keys = Array.from(bucketed.keys()).sort((a,b)=>a-b)
         const limitedKeys = this.maxPoints > 0 ? keys.slice(-this.maxPoints) : keys
         const labels = limitedKeys.map(t => new Date(t).toLocaleTimeString())
+        
+        // Calculate cumulative counts
         let running = 0
-        const data = limitedKeys.map(t => { running += (bucketed.get(t) || 0); return running })
+        const data = limitedKeys.map(t => { 
+          running += (bucketed.get(t) || 0)
+          return running 
+        })
+        
         this.render(labels, data)
       } catch (e) {
+        console.error('Failed to load org overview chart:', e)
         this.render([], [])
-      } finally { this.loading = false }
+      } finally { 
+        this.loading = false 
+      }
     },
     render(labels, data) {
       const ctx = this.$refs.chart?.getContext('2d')

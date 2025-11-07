@@ -29,6 +29,7 @@
 
     <div v-if="selectedPollAddress" class="poll-state">
       <span class="state-chip" :class="stateClass">{{ stateLabel }}</span>
+      <span v-if="trustedForwarder && trustedForwarder !== '0x0000000000000000000000000000000000000000'" class="gasless-badge">⚡ Gasless enabled</span>
       <span v-if="startTime" class="meta">Opens {{ formatTime(startTime * 1000) }}</span>
       <span v-if="endTime" class="meta">Closes {{ formatTime(endTime * 1000) }}</span>
       <span v-if="timerCopy" class="countdown">{{ timerCopy }}</span>
@@ -133,6 +134,7 @@ export default {
       isAllowlisted: true,
       privateMode: false,
       proofText: '',
+      trustedForwarder: '',
     }
   },
   computed: {
@@ -278,12 +280,17 @@ export default {
           this.poll.methods.restricted().call().catch(() => false),
           this.poll.methods.privateMode().call().catch(() => false),
         ])
+        
+        // Fetch trustedForwarder separately
+        const forwarder = await this.poll.methods.trustedForwarder().call().catch(() => '0x0000000000000000000000000000000000000000')
+        
         this.options = options
         this.state = Number(state)
         this.startTime = Number(startTime)
         this.endTime = Number(endTime)
   this.restricted = Boolean(restricted)
   this.privateMode = Boolean(privateMode)
+        this.trustedForwarder = forwarder
         const onChainRemaining = Number(remaining)
         const clockRemaining = this.endTime ? Math.floor(this.endTime - Date.now() / 1000) : onChainRemaining
         const candidates = [onChainRemaining, clockRemaining].filter((v) => Number.isFinite(v))
@@ -645,4 +652,19 @@ label > span {
 .row { display: flex; gap: 12px; align-items: center; }
 .hint { color: var(--text-muted); font-size: 12px; }
 .proof span { display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+
+.gasless-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
 </style>

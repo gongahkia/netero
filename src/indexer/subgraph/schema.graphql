@@ -18,6 +18,7 @@ type Poll @entity {
   restricted: Boolean!
   privateMode: Boolean!
   merkleRoot: Bytes!
+  trustedForwarder: Bytes!
   votes: [Vote!]! @derivedFrom(field: "poll")
 }
 

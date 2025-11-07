@@ -114,6 +114,9 @@
         <span class="label">Poll address</span>
         <code>{{ createdPoll.address }}</code>
       </div>
+      <div v-if="trustedForwarder && trustedForwarder !== '0x0000000000000000000000000000000000000000'" class="badge-container">
+        <span class="gasless-badge">⚡ Gasless enabled</span>
+      </div>
       <div class="result-meta" v-if="createdPoll.endTime">
         <span class="label">Closes</span>
         <span>{{ formatDate(createdPoll.endTime * 1000) }}</span>
@@ -422,5 +425,26 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.badge-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.gasless-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 </style>

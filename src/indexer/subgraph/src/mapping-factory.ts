@@ -25,6 +25,7 @@ export function handlePollCreated(event: PollCreated): void {
   let restResult = bound.try_restricted()
   let privResult = bound.try_privateMode()
   let rootResult = bound.try_merkleRoot()
+  let forwarderResult = bound.try_trustedForwarder()
 
   poll.title = titleResult.reverted ? event.params.title : titleResult.value
   poll.description = descResult.reverted ? "" : descResult.value
@@ -49,5 +50,6 @@ export function handlePollCreated(event: PollCreated): void {
   poll.restricted = restResult.reverted ? false : restResult.value
   poll.privateMode = privResult.reverted ? false : privResult.value
   poll.merkleRoot = rootResult.reverted ? Bytes.empty() : rootResult.value
+  poll.trustedForwarder = forwarderResult.reverted ? Bytes.empty() : Bytes.fromHexString(forwarderResult.value.toHex())
   poll.save()
 }
