@@ -1,4 +1,4 @@
-[![](https://img.shields.io/badge/netero_1.0.0-passing-green)](https://github.com/gongahkia/netero/releases/tag/1.0.0) 
+[![](https://img.shields.io/badge/netero_1.0.0-passing-dark_green)](https://github.com/gongahkia/netero/releases/tag/1.0.0) 
 [![](https://img.shields.io/badge/netero_2.0.0-passing-green)](https://github.com/gongahkia/netero/releases/tag/2.0.0)
 
 # `Netero`
@@ -121,3 +121,4 @@ The name `Netero` is in reference to [Isaac Netero](https://hunterxhunter.fandom
 <div align='center'>
     <img src='./asset/logo/netero.png' width='50%'>
 </div>
+
